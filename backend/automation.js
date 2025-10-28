@@ -184,9 +184,17 @@ class AutomationEngine {
     const report = {
       month,
       year,
-      totalSavings: await Saving.aggregate([...any]),
-      totalLoans: await Loan.aggregate([...any]),
-      totalFines: await Fine.aggregate([...any]),
+      totalSavings: await Saving.aggregate([
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]).then(res => res[0]?.total || 0),
+      totalLoans: await Loan.aggregate([
+        { $match: { status: 'approved' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]).then(res => res[0]?.total || 0),
+      totalFines: await Fine.aggregate([
+        { $match: { paid: false } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]).then(res => res[0]?.total || 0),
       generatedAt: new Date()
     };
 
@@ -197,5 +205,3 @@ class AutomationEngine {
 
 
 export default AutomationEngine;
-
-

@@ -1,10 +1,9 @@
 import express from 'express';
 import Announcement from '../models/announcement.js';
-import { verifyToken, verifyAdmin } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 // GET ALL ANNOUNCEMENTS
-router.get('/', verifyToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const announcements = await Announcement.find()
       .populate('author', 'name email role')
@@ -23,7 +22,7 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 // CREATE ANNOUNCEMENT (Admin only)
-router.post('/', verifyToken, verifyAdmin, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { title, message } = req.body;
 

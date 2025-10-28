@@ -1,6 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import Member from '../models/Member.js';
+import Member from '../models/member.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();

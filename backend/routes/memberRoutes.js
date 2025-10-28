@@ -1,11 +1,10 @@
-import express from 'express';
+nimport express from 'express';
 import Member from '../models/member.js';
-import { verifyToken, verifyAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // GET ALL MEMBERS (Admin only)
-router.get('/', verifyToken, verifyAdmin, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const members = await Member.find().select('-password').sort({ createdAt: -1 });
     res.json({
@@ -21,7 +20,7 @@ router.get('/', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // GET PENDING MEMBERS (Admin only)
-router.get('/pending', verifyToken, verifyAdmin, async (req, res) => {
+router.get('/pending', async (req, res) => {
   try {
     const pendingMembers = await Member.find({ status: 'pending' }).select('-password');
     res.json({
@@ -37,7 +36,7 @@ router.get('/pending', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // APPROVE MEMBER (Admin only)
-router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
+router.put('/:id/approve', async (req, res) => {
   try {
     const member = await Member.findByIdAndUpdate(
       req.params.id,
@@ -71,7 +70,7 @@ router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // REJECT MEMBER (Admin only)
-router.put('/:id/reject', verifyToken, verifyAdmin, async (req, res) => {
+router.put('/:id/reject', async (req, res) => {
   try {
     const member = await Member.findByIdAndUpdate(
       req.params.id,
@@ -101,7 +100,7 @@ router.put('/:id/reject', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // GET MEMBER STATS
-router.get('/stats', verifyToken, verifyAdmin, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const totalMembers = await Member.countDocuments({ status: 'approved' });
     const pendingMembers = await Member.countDocuments({ status: 'pending' });
