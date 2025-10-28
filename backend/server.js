@@ -1,309 +1,219 @@
 import express from "express";
+import sqlite3 from "sqlite3";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import rateLimit from 'express-rate-limit';
-import { connectSqlite, connectMongo, createTables, createDefaultAdmin } from './database.js';
-import { errorHandler } from './middleware/errorMiddleware.js';
-
-// Import routes and models
-import authRoutes from "./routes/authRoutes.js";
-import memberRoutes from "./routes/memberRoutes.js";
-import announcementRoutes from "./routes/announcementsRoutes.js";
-import leaderboardRoutes from "./routes/leaderboardRoutes.js";
-import createAutomationRouter from './routes/automationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const SECRET_KEY = process.env.JWT_SECRET || "MERCURE_SECRET_2025_REPLACE_IN_PROD";
+const PORT = process.env.PORT || 3000; // Changed to 3000 for backend
+const SECRET_KEY = process.env.JWT_SECRET || "MERCURE_SECRET_2025";
 
+console.log("🔄 Server starting...");
 
-// Middleware
+// Database connection
+const db = new sqlite3.Database("./mercure.db", (err) => {
+  if (err) {
+    console.error("❌ DB connection error:", err.message);
+  } else {
+    console.log("✅ SQLite DB connected");
+  }
+});
+
+// Middleware - FIXED CORS (frontend on 3001, backend on 3000)
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? (process.env.CORS_ORIGIN || "https://your-frontend-app.onrender.com")
-    : "http://localhost:3000",
+  origin: "http://localhost:3001", // React frontend port
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
-
-// Handle preflight requests
-app.options('*', cors());
 
 app.use(express.json());
 
-// Security: Rate Limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api/', apiLimiter);
-
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
   console.log(`📍 ${req.method} ${req.path}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('📦 Request body:', JSON.stringify(req.body).substring(0, 200));
-  }
   next();
 });
 
-// Database instance placeholder
-let db;
+// Create tables
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT, username TEXT UNIQUE, phone TEXT, email TEXT UNIQUE,
+    password TEXT, role TEXT DEFAULT 'Member', balance REAL DEFAULT 0,
+    status TEXT DEFAULT 'approved', last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-// Test routes
-app.get("/api/test-simple", (req, res) => {
-  console.log("✅ Simple test route hit!");
-  res.json({ message: "Backend is working!", timestamp: new Date() });
-});
+  db.run(`CREATE TABLE IF NOT EXISTS savings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, amount REAL,
+    date DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-app.get("/api/health", (req, res) => {
-  console.log("🏥 Health check received");
-  res.json({ 
-    status: "OK", 
-    timestamp: new Date(),
-    message: "Backend is running" 
+  db.run(`CREATE TABLE IF NOT EXISTS loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, amount REAL,
+    principal_amount REAL DEFAULT 0, purpose TEXT, reason TEXT,
+    status TEXT DEFAULT 'pending', due_date DATE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS fines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, amount REAL,
+    reason TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid INTEGER DEFAULT 0
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS announcements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Create default admin
+  bcrypt.hash('867304', 10, (err, hashedPassword) => {
+    if (!err) {
+      db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role) 
+              VALUES (?, ?, ?, ?, ?)`, 
+              ['KEVIN BUXTON', 'kevindelaquez@gmail.com', hashedPassword, 'delaquez', 'treasurer']);
+    }
   });
 });
 
-// ====================== AUTH MIDDLEWARE ======================
-function authMiddleware(requiredRole) {
-  return (req, res, next) => {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader) return res.status(401).json({ error: "Authorization header required" });
+// ====================== ESSENTIAL ROUTES ======================
 
-    const token = authHeader.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "Token missing" });
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", timestamp: new Date() });
+});
 
-    jwt.verify(token, SECRET_KEY, (err, decoded) => {
-      if (err) return res.status(403).json({ error: "Invalid token" });
-      if (requiredRole && decoded.role !== requiredRole)
-        return res.status(403).json({ error: `Access denied: ${requiredRole} only` });
+app.get("/api/test", (req, res) => {
+  res.json({ message: "✅ API is working!" });
+});
 
-      req.user = decoded;
-      next();
-    });
-  };
-}
+// Login route
+app.post("/api/login", (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: "Email and password required" });
+  }
 
-// ====================== SAVINGS, LOANS, FINES ROUTES ======================
-// These routes were missing, causing timeouts on the frontend.
+  db.get("SELECT * FROM members WHERE email = ?", [email], async (err, member) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
+    
+    if (!member) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
 
-app.get("/api/get-savings", async (req, res, next) => {
-  try {
-    const rows = await db.all("SELECT s.*, m.name as member_name FROM savings s JOIN members m ON s.member_id = m.id ORDER BY date DESC");
+    try {
+      const match = await bcrypt.compare(password, member.password);
+      
+      if (!match) {
+        return res.status(401).json({ success: false, message: "Invalid password" });
+      }
+
+      const token = jwt.sign(
+        { id: member.id, email: member.email, role: member.role },
+        SECRET_KEY,
+        { expiresIn: "7d" }
+      );
+
+      console.log("✅ Login successful for:", member.email);
+      
+      res.json({
+        success: true,
+        message: "Login successful",
+        token: token,
+        role: member.role,
+        user: {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          role: member.role,
+          username: member.username
+        }
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ success: false, message: "Server error during login" });
+    }
+  });
+});
+
+// Members routes
+app.get("/api/members", (req, res) => {
+  db.all("SELECT id, name, email, phone, role, balance FROM members", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
-  } catch (err) {
-    next(err);
-  }
+  });
 });
 
-app.get("/api/get-total-savings", async (req, res, next) => {
-  try {
-    const row = await db.get("SELECT SUM(amount) AS total_savings FROM savings");
-    res.json({ total_savings: row.total_savings || 0 });
-  } catch (err) {
-    next(err);
+app.put("/api/members/:id", (req, res) => {
+  const { id } = req.params;
+  const { name, email, phone, role } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ success: false, error: "Name and email are required" });
   }
+
+  db.run(
+    "UPDATE members SET name = ?, email = ?, phone = ?, role = ? WHERE id = ?",
+    [name, email, phone, role, id],
+    function (err) {
+      if (err) return res.status(500).json({ success: false, error: err.message });
+      res.json({ success: true, message: "Member updated successfully" });
+    }
+  );
 });
 
-app.post("/api/add-savings", async (req, res, next) => {
+// Savings routes
+app.get("/api/get-savings", (req, res) => {
+  db.all("SELECT * FROM savings ORDER BY date DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post("/api/add-savings", (req, res) => {
   const { member_id, amount } = req.body;
   if (!member_id || !amount) {
     return res.status(400).json({ success: false, error: "Member ID and amount required" });
   }
-  try {
-    const result = await db.run("INSERT INTO savings (member_id, amount) VALUES (?, ?)", [member_id, amount]);
-    res.json({ success: true, message: "Savings added!", id: result.lastID });
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.get("/api/get-loans", async (req, res, next) => {
-  try {
-    const query = `
-      SELECT l.id, l.member_id, m.name AS member_name, l.amount, l.status, l.due_date
-      FROM loans l JOIN members m ON l.member_id = m.id ORDER BY l.id DESC`;
-    const rows = await db.all(query);
-    res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.post("/api/request-loan", async (req, res, next) => {
-  const { member_id, amount, purpose, reason, due_date } = req.body;
-  if (!member_id || !amount || !purpose) {
-    return res.status(400).json({ success: false, error: "Missing required fields" });
-  }
-  try {
-    const result = await db.run(
-      "INSERT INTO loans (member_id, amount, principal_amount, purpose, reason, status, due_date) VALUES (?, ?, ?, ?, ?, 'pending', ?)",
-      [member_id, amount, amount, purpose, reason || null, due_date || null]
-    );
-    res.json({ success: true, message: "Loan requested", loan_id: result.lastID });
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.get("/api/get-fines", async (req, res, next) => {
-  try {
-    const query = `SELECT f.*, m.name AS member_name FROM fines f JOIN members m ON f.member_id = m.id ORDER BY date DESC`;
-    const rows = await db.all(query);
-    res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.post("/api/add-fine", async (req, res, next) => {
-  const { member_id, amount, reason } = req.body;
-  if (!member_id || !amount || !reason) {
-    return res.status(400).json({ success: false, error: 'Missing required fields' });
-  }
-  try {
-    const result = await db.run("INSERT INTO fines (member_id, amount, reason) VALUES (?, ?, ?)", [member_id, amount, reason]);
-    res.json({ success: true, message: "Fine added successfully", fine_id: result.lastID });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ====================== MEMBER EDIT/DELETE ROUTES ======================
-// These routes are required for the edit and delete functionality on the Members page.
-
-app.put("/api/members/:id", async (req, res, next) => {
-  const { id } = req.params;
-  const { name, email, phone, role } = req.body;
-  if (!name || !email) {
-    return res.status(400).json({ success: false, error: "Name and email are required" });
-  }
-  try {
-    const result = await db.run("UPDATE members SET name = ?, email = ?, phone = ?, role = ? WHERE id = ?", [name, email, phone, role, id]);
-    if (result.changes === 0) return res.status(404).json({ success: false, error: "Member not found" });
-    res.json({ success: true, message: "Member updated successfully" });
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.delete("/api/members/:id", async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    const result = await db.run("DELETE FROM members WHERE id = ?", id);
-    if (result.changes === 0) return res.status(404).json({ success: false, error: "Member not found" });
-    res.json({ success: true, message: "Member deleted successfully" });
-  } catch (err) {
-    next(err);
-  }
-});
-
-
-// ====================== DASHBOARD & LEADERBOARD ROUTES ======================
-app.get("/api/group-stats", async (req, res, next) => {
-  try {
-    const [membersRow, savingsRow, loansRow] = await Promise.all([
-      db.get("SELECT COUNT(*) AS total_members FROM members"),
-      db.get("SELECT SUM(amount) AS total_savings FROM savings"),
-      db.get("SELECT COUNT(*) AS active_loans FROM loans WHERE status='pending'")
-    ]);
-    res.json({
-      total_members: membersRow?.total_members || 0,
-      total_savings: savingsRow?.total_savings || 0,
-      active_loans: loansRow?.active_loans || 0,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.use('/api', leaderboardRoutes);
-
-// ====================== AUTOMATION ROUTES ======================
-app.use('/api/automation', createAutomationRouter(db));
-
-// Route debugging
-app.get("/api/debug-routes", (req, res) => {
-  const routes = [];
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-      routes.push({
-        path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods)
-      });
-    }
+  db.run("INSERT INTO savings (member_id, amount) VALUES (?, ?)", [member_id, amount], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: "Savings added!", id: this.lastID });
   });
-  res.json({ routes, total: routes.length });
+});
+
+// Dashboard stats
+app.get("/api/group-stats", (req, res) => {
+  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+    if (err) return res.status(500).json({ error: "Failed to get members count" });
+
+    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+      if (err) return res.status(500).json({ error: "Failed to get total savings" });
+
+      res.json({
+        total_members: membersRow.total_members || 0,
+        total_savings: savingsRow.total_savings || 0,
+        active_loans: 0 // Simplified for now
+      });
+    });
+  });
 });
 
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
-app.get("/api/test", (req, res) => res.json({ message: "✅ API is working!" }));
 
-// Use imported routes
-// Auth routes
-app.use('/api', authRoutes); // Handles /api/login, /api/register
-// Member routes
-app.use('/api/members', memberRoutes);
-// Announcement routes
-app.use('/api/announcements', announcementRoutes);
-
-// Centralized Error Handler
-app.use(errorHandler);
-
-// ====================== PRODUCTION SETTINGS ======================
-// Serve static files from the React frontend build directory
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// The "catchall" handler: for any request that doesn't
-// match one of the API routes above, send back React's index.html file.
-// This is necessary for client-side routing to work in production.
-app.get('*', (req, res) => {
-  // Ensure the request is not for an API endpoint before sending index.html
-  if (!req.path.startsWith('/api/')) {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  } else {
-    res.status(404).json({ error: "API endpoint not found" });
-  }
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 API: http://localhost:${PORT}/api`);
+  console.log(`✅ Health: http://localhost:${PORT}/api/health`);
+  console.log(`🎯 Login: kevindelaquez@gmail.com / 867304`);
 });
-
-/**
- * Initializes databases and starts the Express server.
- */
-async function startServer() {
-  console.log("🔄 Server starting...");
-  console.log("📁 Current directory:", __dirname);
-  console.log("🔧 Node version:", process.version);
-
-  // Connect to databases
-  db = await connectSqlite();
-  await connectMongo();
-
-  // Set up database schema and default data
-  await createTables(db);
-  await createDefaultAdmin(db)
-    .then(() => console.log("✅ Default admin ensured."))
-    .catch(err => console.error("❌ Error creating default admin:", err));
-
-  // Start Express server
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
-}
-
-// Start the server
-startServer();
-
