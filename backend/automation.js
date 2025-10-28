@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import Loan from './models/LoanModel.js';
-import Fine from './models/Fine models.js';
+import Fine from './models/FineModels.js';
 import Member from './models/Member.js';
 import { Saving } from './models/savingModel.js';
 
@@ -194,5 +194,6 @@ class AutomationEngine {
     console.log('Monthly report generated:', report);
   }
 }
+
 
 export default AutomationEngine;
