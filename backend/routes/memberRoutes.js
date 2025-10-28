@@ -1,5 +1,5 @@
 import express from 'express';
-import Member from '../models/Member.js';
+import Member from '../models/member.js';
 import { verifyToken, verifyAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -125,5 +125,6 @@ router.get('/stats', verifyToken, verifyAdmin, async (req, res) => {
     });
   }
 });
+
 
 export default router;
