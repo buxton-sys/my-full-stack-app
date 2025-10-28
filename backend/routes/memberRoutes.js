@@ -1,4 +1,4 @@
-nimport express from 'express';
+import express from 'express';
 import Member from '../models/member.js';
 
 const router = express.Router();

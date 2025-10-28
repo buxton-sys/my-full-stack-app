@@ -294,29 +294,16 @@ async function startServer() {
 
   // Set up database schema and default data
   await createTables(db);
-  await createDefaultAdmin(db);
-# Create ALL missing files as empty placeholders
-mkdir -p models middleware
-touch models/Member.js
-touch models/memberRoutes.js  
-touch middleware/authMiddleware.js
+  await createDefaultAdmin(db)
+    .then(() => console.log("✅ Default admin ensured."))
+    .catch(err => console.error("❌ Error creating default admin:", err));
 
-# Add basic content to prevent errors
-echo "export default {}" > models/Member.js
-echo "export default {}" > models/memberRoutes.js
-echo "export default function authMiddleware() { return (req, res, next) => next() }" > middleware/authMiddleware.js  
-  // TODO: Instantiate and start the automation engine once models are finalized
-  // new AutomationEngine();
-
-  // Start the server
+  // Start Express server
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌐 API available at: http://localhost:${PORT}/api`);
-    console.log(`✅ Test endpoint: http://localhost:${PORT}/api/test`);
-    console.log(`\n🎯 READY TO LOGIN WITH:`);
-    console.log(`   Email: kevindelaquez@gmail.com`);
-    console.log(`   Password: 867304`);
   });
 }
 
-startServer().catch(err => console.error("❌ Failed to start server:", err));
+// Start the server
+startServer();
+
