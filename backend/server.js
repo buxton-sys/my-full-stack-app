@@ -31,7 +31,7 @@ console.log("📁 Current directory:", __dirname); // This will now work correct
 console.log("🔧 Node version:", process.version);
 
 // Database connection - MOVED TO TOP
-const db = new sqlite3.Database("./mercure.db", (err) => {
+const db = new sqlite3.Database(process.env.DATABASE_PATH || "./mercure.db", (err) => {
   if (err) {
     console.error("❌ DB connection error:", err.message);
   } else {
@@ -50,7 +50,9 @@ const db = new sqlite3.Database("./mercure.db", (err) => {
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:3000", // Your React app port
+  origin: process.env.NODE_ENV === 'production' 
+  ? ["https://your-frontend-app.onrender.com"] // We'll update this after deployment
+  : "http://localhost:3000", // Your React app port
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -462,7 +464,7 @@ app.use('/api/announcements', announcementRoutes);
 
 // ====================== PRODUCTION SETTINGS ======================
 // Serve static files from the React frontend build directory
-app.use(express.static(path.join(__dirname, '../mercure-frontend/dist')));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // The "catchall" handler: for any request that doesn't
 // match one of the API routes above, send back React's index.html file.
@@ -470,7 +472,7 @@ app.use(express.static(path.join(__dirname, '../mercure-frontend/dist')));
 app.get('*', (req, res) => {
   // Ensure the request is not for an API endpoint before sending index.html
   if (!req.path.startsWith('/api/')) {
-    res.sendFile(path.join(__dirname, '../mercure-frontend/dist/index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
   } else {
     res.status(404).json({ error: "API endpoint not found" });
   }
@@ -490,5 +492,6 @@ app.listen(PORT, async () => {
   console.log(`   Password: 867304`);
 
 });
+
 
 
