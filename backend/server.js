@@ -12,7 +12,7 @@ import mongoose from "mongoose";
 import authRoutes from "./routes/authRoutes.js";
 import memberRoutes from "./routes/memberRoutes.js";
 import announcementRoutes from "./routes/announcementsRoutes.js";
-import Member from "./models/member.js";
+import Member from "./models/memberRoutes.js";
 import AutomationEngine from "./automation.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 
@@ -490,3 +490,4 @@ app.listen(PORT, async () => {
   console.log(`   Password: 867304`);
 
 });
+
