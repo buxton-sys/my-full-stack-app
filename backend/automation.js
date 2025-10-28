@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import Loan from './models/LoanModel.js';
 import Fine from './models/FineModels.js';
-import Member from './models/Member.js';
+import Member from './models/member.js';
 import { Saving } from './models/savingModel.js';
 
 class AutomationEngine {
@@ -197,3 +197,4 @@ class AutomationEngine {
 
 
 export default AutomationEngine;
+
