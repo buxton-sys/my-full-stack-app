@@ -3,3 +3,4 @@
   automated; Boolean,     // true for auto-generated fines
   systemNote; String      // Explanation of auto-fine
 };
+export default Fine;
