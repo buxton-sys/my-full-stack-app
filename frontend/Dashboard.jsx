@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getMembers, getTotalSavings, getLoans, getDashboardStats } from "../api";
-import { getSavings } from "../api";
+import { getMembers, getTotalSavings, getLoans, getDashboardStats } from "./frontend";
+import { getSavings } from "./frontend";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 
@@ -358,4 +358,5 @@ export default function Dashboard() {
   );
 
 }
+
 
