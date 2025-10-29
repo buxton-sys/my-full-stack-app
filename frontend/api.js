@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BASE_URL = 'http://localhost:3001'; // Changed to base URL without /api
+const BASE_URL = 'https://mercure-group.onrender.com'
+  
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -279,3 +280,4 @@ export const getAutomationMembers = () => {
 
 
 export default api;
+
