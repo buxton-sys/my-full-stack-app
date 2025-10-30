@@ -227,13 +227,13 @@ app.get("/api/test", (req, res) => {
 
 // Login route - UPDATED TO RETURN MEMBER_CODE
 app.post("/api/login", (req, res) => {
-  const { email, password } = req.body;
+  const { member_code, password } = req.body;
   
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: "Email and password required" });
+  if (!member_code || !password) {
+    return res.status(400).json({ success: false, message: "member_code and password required" });
   }
 
-  db.get("SELECT * FROM members WHERE email = ?", [email], async (err, member) => {
+  db.get("SELECT * FROM members WHERE member_code = ?", [member_code], async (err, member) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ success: false, message: "Database error" });
@@ -802,5 +802,6 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
