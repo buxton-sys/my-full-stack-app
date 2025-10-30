@@ -1005,7 +1005,7 @@ else {
             });
           });
         });
-      }
+      });
       else {
         // For other transaction types, just mark as approved for now
         db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
@@ -1212,6 +1212,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
 
