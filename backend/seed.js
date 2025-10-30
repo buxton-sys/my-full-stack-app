@@ -16,7 +16,7 @@ async function seed() {
 
     // --- Members ---
     const members = [
-      { name: "Alice", username: "alice", email: "alice@test.com", phone: "0711000001", password: "pass123", role: "Member", balance: 5000 },
+      { name: "Hmeston Odege", username: "Hemston", email: "hemston@test.com", phone: "0708692752", password: "pass123", role: "Chairperson", balance: 3500 },
       { name: "Bob", username: "bob", email: "bob@test.com", phone: "0711000002", password: "pass123", role: "Member", balance: 8000 },
       { name: "Charlie", username: "charlie", email: "charlie@test.com", phone: "0711000003", password: "pass123", role: "Admin", balance: 10000 },
       { name: "Diana", username: "diana", email: "diana@test.com", phone: "0711000004", password: "pass123", role: "Super Admin", balance: 15000 },
@@ -81,3 +81,4 @@ async function seed() {
 }
 
 seed();
+
