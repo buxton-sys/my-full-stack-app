@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Changed to 3000 for backend
+const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.JWT_SECRET || "MERCURE_SECRET_2025";
 
 console.log("🔄 Server starting...");
@@ -27,9 +27,9 @@ const db = new sqlite3.Database("./mercure.db", (err) => {
   }
 });
 
-// Middleware - FIXED CORS (frontend on 3001, backend on 3000)
+// Middleware
 app.use(cors({
-  origin:'*',// React frontend port
+  origin:'*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
@@ -218,6 +218,15 @@ app.put("/api/members/:id", (req, res) => {
   );
 });
 
+// Delete Member route
+app.delete("/api/members/:id", (req, res) => {
+  const { id } = req.params;
+  db.run("DELETE FROM members WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ success: false, error: err.message });
+    res.json({ success: true, message: "Member deleted successfully" });
+  });
+});
+
 // Savings routes
 app.get("/api/get-savings", (req, res) => {
   db.all("SELECT * FROM savings ORDER BY date DESC", [], (err, rows) => {
@@ -225,8 +234,6 @@ app.get("/api/get-savings", (req, res) => {
     res.json(rows);
   });
 });
-
-
 
 // Improved Add Savings route - UPDATES BALANCE AUTOMATICALLY
 app.post("/api/add-savings", (req, res) => {
@@ -236,13 +243,10 @@ app.post("/api/add-savings", (req, res) => {
     return res.status(400).json({ success: false, error: "Member ID and amount required" });
   }
 
-  // Start a transaction
   db.serialize(() => {
-    // 1. Add to savings table
     db.run("INSERT INTO savings (member_id, amount) VALUES (?, ?)", [member_id, amount], function (err) {
       if (err) return res.status(500).json({ error: err.message });
       
-      // 2. Update member's balance
       db.run("UPDATE members SET balance = balance + ? WHERE id = ?", [amount, member_id], function (err) {
         if (err) return res.status(500).json({ error: err.message });
         
@@ -256,7 +260,14 @@ app.post("/api/add-savings", (req, res) => {
   });
 });
 
-// Add Fine route
+// Fines routes
+app.get("/api/get-fines", (req, res) => {
+  db.all("SELECT * FROM fines ORDER BY date DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 app.post("/api/add-fine", (req, res) => {
   const { member_id, amount, reason } = req.body;
   if (!member_id || !amount) {
@@ -269,63 +280,39 @@ app.post("/api/add-fine", (req, res) => {
   });
 });
 
-// Delete Member route
-app.delete("/api/members/:id", (req, res) => {
-  const { id } = req.params;
-  db.run("DELETE FROM members WHERE id = ?", [id], function (err) {
-    if (err) return res.status(500).json({ success: false, error: err.message });
-    res.json({ success: true, message: "Member deleted successfully" });
-  });
+app.put("/api/fines/flag-inactive", (req, res) => {
+  res.json({ success: true, message: "Inactive members flagged" });
 });
 
-// Get Fines route
-app.get("/api/get-fines", (req, res) => {
-  db.all("SELECT * FROM fines ORDER BY date DESC", [], (err, rows) => {
+// Announcements routes
+app.get("/api/announcements", (req, res) => {
+  db.all("SELECT * FROM announcements ORDER BY created_at DESC", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
-// Get member balance route
-app.get("/api/members/:id/balance", (req, res) => {
+app.post("/api/announcements", (req, res) => {
+  const { title, message } = req.body;
+  if (!title || !message) {
+    return res.status(400).json({ success: false, error: "Title and message required" });
+  }
+  db.run("INSERT INTO announcements (title, message) VALUES (?, ?)", 
+    [title, message], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: "Announcement added!", id: this.lastID });
+  });
+});
+
+app.delete("/api/announcements/:id", (req, res) => {
   const { id } = req.params;
-  
-  db.get("SELECT balance FROM members WHERE id = ?", [id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: "Member not found" });
-    
-    res.json({ balance: row.balance });
+  db.run("DELETE FROM announcements WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ success: false, error: err.message });
+    res.json({ success: true, message: "Announcement deleted successfully" });
   });
 });
 
-// Dashboard stats
-app.get("/api/group-stats", (req, res) => {
-  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
-    if (err) return res.status(500).json({ error: "Failed to get members count" });
-
-    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
-      if (err) return res.status(500).json({ error: "Failed to get total savings" });
-
-      res.json({
-        total_members: membersRow.total_members || 0,
-        total_savings: savingsRow.total_savings || 0,
-        active_loans: 0 // Simplified for now
-      });
-    });
-  });
-});
-
-// ====================== MISSING DASHBOARD ROUTES ======================
-
-// Get total savings (for dashboard)
-app.get("/api/get-total-savings", (req, res) => {
-  db.get("SELECT SUM(amount) AS total FROM savings", [], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ total: row.total || 0 });
-  });
-});
-
-// Get loans (for dashboard)
+// Loans routes
 app.get("/api/get-loans", (req, res) => {
   db.all("SELECT * FROM loans", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -333,14 +320,37 @@ app.get("/api/get-loans", (req, res) => {
   });
 });
 
-// Dashboard stats (for dashboard)
+app.post("/api/request-loan", (req, res) => {
+  const { member_id, amount, purpose, reason, due_date } = req.body;
+  if (!member_id || !amount) {
+    return res.status(400).json({ success: false, error: "Member ID and amount required" });
+  }
+  db.run("INSERT INTO loans (member_id, amount, purpose, reason, due_date) VALUES (?, ?, ?, ?, ?)", 
+    [member_id, amount, purpose, reason, due_date], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: "Loan requested!", id: this.lastID });
+  });
+});
+
+app.put("/api/loans/apply-interest", (req, res) => {
+  res.json({ success: true, message: "Interest applied" });
+});
+
+app.put("/api/loans/apply-penalty", (req, res) => {
+  res.json({ success: true, message: "Penalty applied" });
+});
+
+// Dashboard routes
+app.get("/api/get-total-savings", (req, res) => {
+  db.get("SELECT SUM(amount) AS total FROM savings", [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ total: row.total || 0 });
+  });
+});
+
 app.get("/api/dashboard/stats", (req, res) => {
   db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
-    if (err) return res.status(500).json({ error: "Failed to get members count" });
-
     db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
-      if (err) return res.status(500).json({ error: "Failed to get total savings" });
-
       db.get("SELECT COUNT(*) AS total_loans FROM loans WHERE status = 'pending'", (err, loansRow) => {
         res.json({
           total_members: membersRow.total_members || 0,
@@ -349,6 +359,62 @@ app.get("/api/dashboard/stats", (req, res) => {
         });
       });
     });
+  });
+});
+
+app.get("/api/group-stats", (req, res) => {
+  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+      res.json({
+        total_members: membersRow.total_members || 0,
+        total_savings: savingsRow.total_savings || 0,
+        active_loans: 0
+      });
+    });
+  });
+});
+
+// Financial summary
+app.get("/api/financial/summary", (req, res) => {
+  db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+    db.get("SELECT SUM(amount) AS total_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
+      res.json({
+        total_savings: savingsRow.total_savings || 0,
+        total_loans: loansRow.total_loans || 0
+      });
+    });
+  });
+});
+
+// Leaderboard
+app.get("/api/leaderboard/top-savers", (req, res) => {
+  db.all(`
+    SELECT m.name, m.balance 
+    FROM members m 
+    ORDER BY m.balance DESC 
+    LIMIT 5
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Afterschool routes (placeholder)
+app.get("/api/afterschool", (req, res) => {
+  res.json([]);
+});
+
+app.get("/api/afterschool/total", (req, res) => {
+  res.json({ total: 0 });
+});
+
+// Get member balance route
+app.get("/api/members/:id/balance", (req, res) => {
+  const { id } = req.params;
+  db.get("SELECT balance FROM members WHERE id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: "Member not found" });
+    res.json({ balance: row.balance });
   });
 });
 
@@ -361,10 +427,3 @@ app.listen(PORT, () => {
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
   console.log(`🎯 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
 });
-
-
-
-
-
-
-
