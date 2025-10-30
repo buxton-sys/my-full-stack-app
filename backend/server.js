@@ -140,7 +140,7 @@ db.serialize(() => {
     {
       member_code: "002", name: "James Blessing", role: "Deputy Chairperson", 
       balance: 120, total_savings: 120, debts: 600, afterschool: 250, loans: 0, fines: 0,
-      email: "jamesblessings22122@gmail.com", username: "jay less", password: "James2005", phone: "0759461630"
+      email: "jamesblessings22122@gmail.com", username: "jay bless", password: "James2005", phone: "0759461630"
     },
     {
       member_code: "003", name: "Peter Omondi", role: "Secretary",
@@ -344,21 +344,6 @@ app.post("/api/forgot-password", (req, res) => {
     }
   });
 });
-
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Password reset email sent to ${email}`);
-      
-      res.json({ 
-        success: true, 
-        message: "Password reset instructions sent to your email" 
-      });
-    } catch (error) {
-      console.error("Password reset error:", error);
-      res.status(500).json({ success: false, message: "Error sending password reset email" });
-    }
-  });
-});
-
 
 // Members sorted by role hierarchy
 app.get("/api/members", (req, res) => {
@@ -597,38 +582,6 @@ app.get("/api/get-total-savings", (req, res) => {
   });
 });
 
-// Get all fines - FIXED
-app.get("/api/get-fines", (req, res) => {
-  db.all(`
-    SELECT f.*, m.name, m.member_code 
-    FROM fines f 
-    JOIN members m ON f.member_code = m.member_code 
-    ORDER BY f.date DESC
-  `, [], (err, rows) => {
-    if (err) {
-      console.error("Fines error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
-// Get all loans - FIXED
-app.get("/api/get-loans", (req, res) => {
-  db.all(`
-    SELECT l.*, m.name, m.member_code 
-    FROM loans l 
-    JOIN members m ON l.member_code = m.member_code 
-    ORDER BY l.due_date DESC
-  `, [], (err, rows) => {
-    if (err) {
-      console.error("Loans error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
 // Group stats route - FIXED
 app.get("/api/group-stats", (req, res) => {
   db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
@@ -858,41 +811,6 @@ app.put("/api/pending-transactions/:id/reject", authenticateToken, (req, res) =>
   });
 });
 
-app.get("/api/get-total-savings", (req, res) => {
-  db.get("SELECT SUM(amount) AS total FROM savings", [], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ total: row?.total || 0 });
-  });
-});
-app.get("/api/group-stats", (req, res) => {
-  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
-    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
-      db.get("SELECT COUNT(*) AS active_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({
-          total_members: membersRow?.total_members || 0,
-          total_savings: savingsRow?.total_savings || 0,
-          active_loans: loansRow?.active_loans || 0
-        });
-      });
-    });
-  });
-});
-app.get("/api/financial/summary", (req, res) => {
-  db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
-    db.get("SELECT SUM(amount) AS total_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
-      db.get("SELECT SUM(amount) AS total_fines FROM fines WHERE paid = 0", (err, finesRow) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({
-          total_savings: savingsRow?.total_savings || 0,
-          total_loans: loansRow?.total_loans || 0,
-          total_fines: finesRow?.total_fines || 0
-        });
-      });
-    });
-  });
-});
-
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -903,8 +821,3 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
-
-
-
-
-
