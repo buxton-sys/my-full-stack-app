@@ -72,13 +72,59 @@ db.serialize(() => {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  // Create default admin
+  // Add all members
+  const members = [
+    {
+      name: "Kevin Buxton",
+      phone: "0112009871", 
+      email: "kevinbuxton2005@gmail.com",
+      username: "delaquez",
+      role: "treasurer",
+      password: "@Delaquez6"
+    },
+    {
+      name: "James blessings",
+      phone: "0759461630",
+      email: "Jamesblessings22122@gmail.com",
+      username: "Jaybless", 
+      role: "Chairperson",
+      password: "James2005"
+    },
+    {
+      name: "Ashley Isca",
+      phone: "0740136631",
+      email: "berylbaraza38@gmail.com",
+      username: "Isca",
+      role: "Organiser", 
+      password: "1234..tems"
+    }
+  ];
+
+  // Add default admin and all members
   bcrypt.hash('867304', 10, (err, hashedPassword) => {
     if (!err) {
-      db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role) 
-              VALUES (?, ?, ?, ?, ?)`, 
-              ['KEVIN BUXTON', 'kevindelaquez@gmail.com', hashedPassword, 'delaquez', 'treasurer']);
+      db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role, phone) 
+              VALUES (?, ?, ?, ?, ?, ?)`, 
+              ['KEVIN BUXTON', 'kevindelaquez@gmail.com', hashedPassword, 'delaquez', 'treasurer', '0112009871']);
     }
+  });
+
+  // Add other members
+  members.forEach(member => {
+    bcrypt.hash(member.password, 10, (err, hashedPassword) => {
+      if (!err) {
+        db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role, phone) 
+                VALUES (?, ?, ?, ?, ?, ?)`, 
+                [member.name, member.email, hashedPassword, member.username, member.role, member.phone],
+                function(err) {
+                  if (err) {
+                    console.error("Error adding member:", err.message);
+                  } else {
+                    console.log(`✅ Added member: ${member.name}`);
+                  }
+                });
+      }
+    });
   });
 });
 
@@ -217,6 +263,7 @@ app.listen(PORT, () => {
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
   console.log(`🎯 Login: kevindelaquez@gmail.com / 867304`);
 });
+
 
 
 
