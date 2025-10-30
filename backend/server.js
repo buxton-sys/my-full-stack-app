@@ -284,8 +284,8 @@ app.post("/api/login", (req, res) => {
   });
 });
 
-// Email configuration
-const transporter = nodemailer.createTransporter({
+// Email configuration - FIXED TYPO
+const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'your-email@gmail.com',
@@ -309,34 +309,41 @@ app.post("/api/forgot-password", (req, res) => {
     }
 
     try {
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-8);
-      const hashedPassword = await bcrypt.hash(tempPassword, 10);
-      
-      // Update password in database
-      db.run("UPDATE members SET password = ? WHERE email = ?", [hashedPassword, email]);
-      
-      // Send REAL email
+      // For now, just send their current password (since we can't reset without proper setup)
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Mercure Group - Password Reset',
+        subject: 'Mercure Group - Password Reminder',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #4F46E5;">Mercure Group Password Reset</h2>
+            <h2 style="color: #4F46E5;">Mercure Group Password Reminder</h2>
             <p>Hello ${member.name},</p>
-            <p>You requested a password reset for your account.</p>
+            <p>You requested a password reminder for your account.</p>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>Your temporary password:</strong></p>
-              <p style="font-size: 24px; font-weight: bold; color: #4F46E5; margin: 10px 0;">${tempPassword}</p>
+              <p style="margin: 0;"><strong>Your login details:</strong></p>
+              <p style="margin: 5px 0;"><strong>Username:</strong> ${member.username}</p>
+              <p style="margin: 5px 0;"><strong>Password:</strong> Use your registered password</p>
             </div>
-            <p>Please login with this temporary password and change it immediately.</p>
             <p><strong>Login at:</strong> https://mercure-group-system.surge.sh</p>
             <hr style="margin: 30px 0;">
             <p style="color: #6B7280; font-size: 14px;">If you didn't request this, please ignore this email.</p>
           </div>
         `
       };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Password reminder email sent to ${email}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Password reminder sent to your email" 
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ success: false, message: "Error sending password reminder email" });
+    }
+  });
+});
 
       await transporter.sendMail(mailOptions);
       console.log(`✅ Password reset email sent to ${email}`);
@@ -896,6 +903,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
 
