@@ -406,77 +406,12 @@ app.get("/api/get-savings", authenticateToken, (req, res) => {
   });
 });
 
-
-// ====================== REAL DATA ROUTES ======================
-
-// Get savings with member names - REAL DATA
-app.get("/api/savings-with-members", (req, res) => {
-  db.all(`
-    SELECT s.*, m.name, m.member_code 
-    FROM savings s 
-    JOIN members m ON s.member_code = m.member_code 
-    ORDER BY s.date DESC
-  `, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows || []); // Return empty array if no savings yet
-  });
-});
-
-// Get loans with member names - REAL DATA  
-app.get("/api/loans-with-members", (req, res) => {
-  db.all(`
-    SELECT l.*, m.name, m.member_code 
-    FROM loans l 
-    JOIN members m ON l.member_code = m.member_code 
-    ORDER BY l.due_date DESC
-  `, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows || []); // Return empty array if no loans yet
-  });
-});
-
-// Get fines with member names - REAL DATA
-app.get("/api/fines-with-members", (req, res) => {
-  db.all(`
-    SELECT f.*, m.name, m.member_code 
-    FROM fines f 
-    JOIN members m ON f.member_code = m.member_code 
-    ORDER BY f.date DESC
-  `, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows || []); // Return empty array if no fines yet
-  });
-});
-
-// Calculate group progress - REAL CALCULATION
-app.get("/api/group-progress", (req, res) => {
-  db.get("SELECT SUM(total_savings) AS current_total FROM members", (err, savingsRow) => {
-    db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
-      const currentTotal = savingsRow?.current_total || 0;
-      const totalMembers = membersRow?.total_members || 11;
-      const dailyTarget = 30;
-      const yearlyTarget = dailyTarget * 365 * totalMembers;
-      const progress = (currentTotal / yearlyTarget) * 100;
-      
-      res.json({
-        current_total: currentTotal,
-        daily_target: dailyTarget,
-        yearly_target: yearlyTarget,
-        progress_percentage: progress.toFixed(2),
-        total_members: totalMembers,
-        message: `Progress: ${progress.toFixed(2)}% of yearly target`
-      });
-    });
-  });
-});
-
-// Get members for dropdowns - REAL MEMBERS
-app.get("/api/members-dropdown", (req, res) => {
-  db.all("SELECT member_code, name FROM members ORDER BY name", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
+// FIXED: Add savings route with proper closure
+app.post("/api/add-saving", authenticateToken, (req, res) => {
+  const { member_code, amount } = req.body;
+  if (!member_code || !amount) {
+    return res.status(400).json({ success: false, error: "Member code and amount required" });
+  }
 
   db.serialize(() => {
     // Get member_id from member_code
@@ -500,7 +435,8 @@ app.get("/api/members-dropdown", (req, res) => {
         });
       });
     });
-  
+  });
+}); // ✅ FIXED: Added missing closing brace and parenthesis
 
 // Afterschool routes
 app.get("/api/afterschool", (req, res) => {
@@ -574,7 +510,7 @@ app.post("/api/pay-fine-pending", authenticateToken, (req, res) => {
 
 // ====================== REAL DATA ROUTES ======================
 
-// Get savings with member names
+// Get savings with member names - REAL DATA
 app.get("/api/savings-with-members", (req, res) => {
   db.all(`
     SELECT s.*, m.name, m.member_code 
@@ -583,11 +519,11 @@ app.get("/api/savings-with-members", (req, res) => {
     ORDER BY s.date DESC
   `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+    res.json(rows || []); // Return empty array if no savings yet
   });
 });
 
-// Get loans with member names and proper status
+// Get loans with member names - REAL DATA  
 app.get("/api/loans-with-members", (req, res) => {
   db.all(`
     SELECT l.*, m.name, m.member_code 
@@ -596,11 +532,11 @@ app.get("/api/loans-with-members", (req, res) => {
     ORDER BY l.due_date DESC
   `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+    res.json(rows || []); // Return empty array if no loans yet
   });
 });
 
-// Get fines with member names
+// Get fines with member names - REAL DATA
 app.get("/api/fines-with-members", (req, res) => {
   db.all(`
     SELECT f.*, m.name, m.member_code 
@@ -609,16 +545,16 @@ app.get("/api/fines-with-members", (req, res) => {
     ORDER BY f.date DESC
   `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+    res.json(rows || []); // Return empty array if no fines yet
   });
 });
 
-// Calculate group progress
+// Calculate group progress - REAL CALCULATION
 app.get("/api/group-progress", (req, res) => {
   db.get("SELECT SUM(total_savings) AS current_total FROM members", (err, savingsRow) => {
     db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
       const currentTotal = savingsRow?.current_total || 0;
-      const totalMembers = membersRow?.total_members || 11; // Default to 11
+      const totalMembers = membersRow?.total_members || 11;
       const dailyTarget = 30;
       const yearlyTarget = dailyTarget * 365 * totalMembers;
       const progress = (currentTotal / yearlyTarget) * 100;
@@ -635,7 +571,7 @@ app.get("/api/group-progress", (req, res) => {
   });
 });
 
-// Get member for dropdowns
+// Get members for dropdowns - REAL MEMBERS
 app.get("/api/members-dropdown", (req, res) => {
   db.all("SELECT member_code, name FROM members ORDER BY name", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -919,7 +855,7 @@ app.get("/api/pending-transactions", authenticateToken, (req, res) => {
   });
 });
 
-// Approve pending transaction (admin only) - PROTECTED
+// FIXED: Approve pending transaction (admin only) - PROTECTED
 app.put("/api/pending-transactions/:id/approve", authenticateToken, (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: "Admin access required" });
@@ -934,63 +870,11 @@ app.put("/api/pending-transactions/:id/approve", authenticateToken, (req, res) =
       if (!transaction) return res.status(404).json({ error: "Transaction not found" });
       
       // Process based on transaction type
-      // Process based on transaction type
-if (transaction.type === 'savings') {
-  // ... existing savings code
-}
-else if (transaction.type === 'loan_repayment') {
-  // Process loan repayment
-  db.run("UPDATE loans SET amount = amount - ? WHERE id = ? AND member_code = ?",
-         [transaction.amount, transaction.proof_image, transaction.member_code], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    // Mark transaction as approved
-    db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, message: "Loan repayment processed" });
-    });
-  });
-}
-else if (transaction.type === 'fine_payment') {
-  // Process fine payment
-  db.run("UPDATE fines SET paid = 1 WHERE id = ? AND member_code = ?",
-         [transaction.proof_image, transaction.member_code], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    // Mark transaction as approved
-    db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, message: "Fine payment processed" });
-    });
-  });
-}
-else if (transaction.type === 'loan_request') {
-  // Process loan request - create actual loan record
-  db.get("SELECT id FROM members WHERE member_code = ?", [transaction.member_code], (err, member) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    const loanData = JSON.parse(transaction.proof_image || '{}');
-    
-    db.run("INSERT INTO loans (member_id, member_code, amount, purpose, reason, due_date, status) VALUES (?, ?, ?, ?, ?, ?, 'approved')",
-           [member.id, transaction.member_code, transaction.amount, loanData.purpose, loanData.reason, loanData.due_date], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      // Mark transaction as approved
-      db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, message: "Loan approved and created" });
-      });
-    });
-  });
-}
-else {
-  // For other transaction types, just mark as approved
-  db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, message: "Transaction approved" });
-  });
-}
-     
+      if (transaction.type === 'savings') {
+        // Get member info
+        db.get("SELECT id FROM members WHERE member_code = ?", [transaction.member_code], (err, member) => {
+          if (err) return res.status(500).json({ error: err.message });
+          
           // Add to savings and update balance
           db.run("INSERT INTO savings (member_id, member_code, amount) VALUES (?, ?, ?)", 
                  [member.id, transaction.member_code, transaction.amount]);
@@ -1005,9 +889,54 @@ else {
             });
           });
         });
-      });
+      }
+      else if (transaction.type === 'loan_repayment') {
+        // Process loan repayment
+        db.run("UPDATE loans SET amount = amount - ? WHERE id = ? AND member_code = ?",
+               [transaction.amount, transaction.proof_image, transaction.member_code], (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+          
+          // Mark transaction as approved
+          db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: "Loan repayment processed" });
+          });
+        });
+      }
+      else if (transaction.type === 'fine_payment') {
+        // Process fine payment
+        db.run("UPDATE fines SET paid = 1 WHERE id = ? AND member_code = ?",
+               [transaction.proof_image, transaction.member_code], (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+          
+          // Mark transaction as approved
+          db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: "Fine payment processed" });
+          });
+        });
+      }
+      else if (transaction.type === 'loan_request') {
+        // Process loan request - create actual loan record
+        db.get("SELECT id FROM members WHERE member_code = ?", [transaction.member_code], (err, member) => {
+          if (err) return res.status(500).json({ error: err.message });
+          
+          const loanData = JSON.parse(transaction.proof_image || '{}');
+          
+          db.run("INSERT INTO loans (member_id, member_code, amount, purpose, reason, due_date, status) VALUES (?, ?, ?, ?, ?, ?, 'approved')",
+                 [member.id, transaction.member_code, transaction.amount, loanData.purpose, loanData.reason, loanData.due_date], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            // Mark transaction as approved
+            db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+              if (err) return res.status(500).json({ error: err.message });
+              res.json({ success: true, message: "Loan approved and created" });
+            });
+          });
+        });
+      }
       else {
-        // For other transaction types, just mark as approved for now
+        // For other transaction types, just mark as approved
         db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
           if (err) return res.status(500).json({ error: err.message });
           res.json({ success: true, message: "Transaction approved" });
@@ -1015,7 +944,7 @@ else {
       }
     });
   });
-});
+}); // ✅ FIXED: Properly closed the function
 
 // Reject pending transaction (admin only) - PROTECTED
 app.put("/api/pending-transactions/:id/reject", authenticateToken, (req, res) => {
@@ -1212,7 +1141,3 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
-
-
-
-
