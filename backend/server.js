@@ -439,6 +439,21 @@ app.post("/api/add-savings", authenticateToken, (req, res) => {
   });
 });
 
+// Afterschool routes
+app.get("/api/afterschool", (req, res) => {
+  db.all("SELECT * FROM members WHERE afterschool > 0", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+});
+
+app.get("/api/afterschool/total", (req, res) => {
+  db.get("SELECT SUM(afterschool) AS total FROM members", [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ total: row?.total || 0 });
+  });
+});
+
 // ====================== UPDATED FINES ROUTES ======================
 
 app.get("/api/get-fines", authenticateToken, (req, res) => {
@@ -821,3 +836,4 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
