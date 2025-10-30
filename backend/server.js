@@ -406,13 +406,77 @@ app.get("/api/get-savings", authenticateToken, (req, res) => {
   });
 });
 
-// UPDATED: Now uses member_code and updates total_savings
-app.post("/api/add-savings", authenticateToken, (req, res) => {
-  const { member_code, amount } = req.body;
-  
-  if (!member_code || !amount) {
-    return res.status(400).json({ success: false, error: "Member code and amount required" });
-  }
+
+// ====================== REAL DATA ROUTES ======================
+
+// Get savings with member names - REAL DATA
+app.get("/api/savings-with-members", (req, res) => {
+  db.all(`
+    SELECT s.*, m.name, m.member_code 
+    FROM savings s 
+    JOIN members m ON s.member_code = m.member_code 
+    ORDER BY s.date DESC
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []); // Return empty array if no savings yet
+  });
+});
+
+// Get loans with member names - REAL DATA  
+app.get("/api/loans-with-members", (req, res) => {
+  db.all(`
+    SELECT l.*, m.name, m.member_code 
+    FROM loans l 
+    JOIN members m ON l.member_code = m.member_code 
+    ORDER BY l.due_date DESC
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []); // Return empty array if no loans yet
+  });
+});
+
+// Get fines with member names - REAL DATA
+app.get("/api/fines-with-members", (req, res) => {
+  db.all(`
+    SELECT f.*, m.name, m.member_code 
+    FROM fines f 
+    JOIN members m ON f.member_code = m.member_code 
+    ORDER BY f.date DESC
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []); // Return empty array if no fines yet
+  });
+});
+
+// Calculate group progress - REAL CALCULATION
+app.get("/api/group-progress", (req, res) => {
+  db.get("SELECT SUM(total_savings) AS current_total FROM members", (err, savingsRow) => {
+    db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+      const currentTotal = savingsRow?.current_total || 0;
+      const totalMembers = membersRow?.total_members || 11;
+      const dailyTarget = 30;
+      const yearlyTarget = dailyTarget * 365 * totalMembers;
+      const progress = (currentTotal / yearlyTarget) * 100;
+      
+      res.json({
+        current_total: currentTotal,
+        daily_target: dailyTarget,
+        yearly_target: yearlyTarget,
+        progress_percentage: progress.toFixed(2),
+        total_members: totalMembers,
+        message: `Progress: ${progress.toFixed(2)}% of yearly target`
+      });
+    });
+  });
+});
+
+// Get members for dropdowns - REAL MEMBERS
+app.get("/api/members-dropdown", (req, res) => {
+  db.all("SELECT member_code, name FROM members ORDER BY name", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
 
   db.serialize(() => {
     // Get member_id from member_code
@@ -482,6 +546,101 @@ app.post("/api/add-fine", authenticateToken, (req, res) => {
       
       res.json({ success: true, message: "Fine added!", id: this.lastID });
     });
+  });
+});
+
+// Add this route to your backend
+app.post("/api/pay-fine-pending", authenticateToken, (req, res) => {
+  const { member_code, fine_id, amount } = req.body;
+  
+  if (!member_code || !fine_id || !amount) {
+    return res.status(400).json({ success: false, error: "Member code, fine ID and amount required" });
+  }
+
+  // Add to pending transactions for admin approval
+  db.run(`INSERT INTO pending_transactions 
+          (member_code, amount, type, status, proof_image) 
+          VALUES (?, ?, 'fine_payment', 'pending', ?)`,
+          [member_code, amount, fine_id], 
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            res.json({ 
+              success: true, 
+              message: "Fine payment submitted for admin approval",
+              id: this.lastID 
+            });
+          });
+});
+
+// ====================== REAL DATA ROUTES ======================
+
+// Get savings with member names
+app.get("/api/savings-with-members", (req, res) => {
+  db.all(`
+    SELECT s.*, m.name, m.member_code 
+    FROM savings s 
+    JOIN members m ON s.member_code = m.member_code 
+    ORDER BY s.date DESC
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Get loans with member names and proper status
+app.get("/api/loans-with-members", (req, res) => {
+  db.all(`
+    SELECT l.*, m.name, m.member_code 
+    FROM loans l 
+    JOIN members m ON l.member_code = m.member_code 
+    ORDER BY l.due_date DESC
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Get fines with member names
+app.get("/api/fines-with-members", (req, res) => {
+  db.all(`
+    SELECT f.*, m.name, m.member_code 
+    FROM fines f 
+    JOIN members m ON f.member_code = m.member_code 
+    ORDER BY f.date DESC
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Calculate group progress
+app.get("/api/group-progress", (req, res) => {
+  db.get("SELECT SUM(total_savings) AS current_total FROM members", (err, savingsRow) => {
+    db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+      const currentTotal = savingsRow?.current_total || 0;
+      const totalMembers = membersRow?.total_members || 11; // Default to 11
+      const dailyTarget = 30;
+      const yearlyTarget = dailyTarget * 365 * totalMembers;
+      const progress = (currentTotal / yearlyTarget) * 100;
+      
+      res.json({
+        current_total: currentTotal,
+        daily_target: dailyTarget,
+        yearly_target: yearlyTarget,
+        progress_percentage: progress.toFixed(2),
+        total_members: totalMembers,
+        message: `Progress: ${progress.toFixed(2)}% of yearly target`
+      });
+    });
+  });
+});
+
+// Get member for dropdowns
+app.get("/api/members-dropdown", (req, res) => {
+  db.all("SELECT member_code, name FROM members ORDER BY name", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
 });
 
@@ -776,11 +935,63 @@ app.put("/api/pending-transactions/:id/approve", authenticateToken, (req, res) =
       if (!transaction) return res.status(404).json({ error: "Transaction not found" });
       
       // Process based on transaction type
-      if (transaction.type === 'savings') {
-        // Get member_id first
-        db.get("SELECT id FROM members WHERE member_code = ?", [transaction.member_code], (err, member) => {
-          if (err) return res.status(500).json({ error: err.message });
-          
+      // Process based on transaction type
+if (transaction.type === 'savings') {
+  // ... existing savings code
+}
+else if (transaction.type === 'loan_repayment') {
+  // Process loan repayment
+  db.run("UPDATE loans SET amount = amount - ? WHERE id = ? AND member_code = ?",
+         [transaction.amount, transaction.proof_image, transaction.member_code], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    // Mark transaction as approved
+    db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, message: "Loan repayment processed" });
+    });
+  });
+}
+else if (transaction.type === 'fine_payment') {
+  // Process fine payment
+  db.run("UPDATE fines SET paid = 1 WHERE id = ? AND member_code = ?",
+         [transaction.proof_image, transaction.member_code], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    // Mark transaction as approved
+    db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, message: "Fine payment processed" });
+    });
+  });
+}
+else if (transaction.type === 'loan_request') {
+  // Process loan request - create actual loan record
+  db.get("SELECT id FROM members WHERE member_code = ?", [transaction.member_code], (err, member) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const loanData = JSON.parse(transaction.proof_image || '{}');
+    
+    db.run("INSERT INTO loans (member_id, member_code, amount, purpose, reason, due_date, status) VALUES (?, ?, ?, ?, ?, ?, 'approved')",
+           [member.id, transaction.member_code, transaction.amount, loanData.purpose, loanData.reason, loanData.due_date], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      // Mark transaction as approved
+      db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: "Loan approved and created" });
+      });
+    });
+  });
+}
+else {
+  // For other transaction types, just mark as approved
+  db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: "Transaction approved" });
+  });
+}
+     
           // Add to savings and update balance
           db.run("INSERT INTO savings (member_id, member_code, amount) VALUES (?, ?, ?)", 
                  [member.id, transaction.member_code, transaction.amount]);
@@ -826,6 +1037,172 @@ app.put("/api/pending-transactions/:id/reject", authenticateToken, (req, res) =>
   });
 });
 
+// ====================== FUNCTIONAL BUTTON ROUTES ======================
+
+// Add Fine - WORKS WHEN ADMIN PRESSES
+app.post("/api/add-fine", authenticateToken, (req, res) => {
+  const { member_code, amount, reason } = req.body;
+  
+  if (!member_code || !amount || !reason) {
+    return res.status(400).json({ success: false, error: "Member code, amount and reason required" });
+  }
+
+  db.get("SELECT id FROM members WHERE member_code = ?", [member_code], (err, member) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!member) return res.status(404).json({ error: "Member not found" });
+
+    db.run("INSERT INTO fines (member_id, member_code, amount, reason) VALUES (?, ?, ?, ?)", 
+      [member.id, member_code, amount, reason], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      // Update member's fines total
+      db.run("UPDATE members SET fines = fines + ? WHERE member_code = ?", [amount, member_code]);
+      
+      res.json({ 
+        success: true, 
+        message: `Fine of Ksh ${amount} added to ${member_code} for: ${reason}`,
+        id: this.lastID 
+      });
+    });
+  });
+});
+
+// Approve Loan - WORKS WHEN ADMIN PRESSES
+app.put("/api/loans/:id/approve", authenticateToken, (req, res) => {
+  const { id } = req.params;
+  
+  db.run("UPDATE loans SET status = 'approved' WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    res.json({ 
+      success: true, 
+      message: "Loan approved successfully!" 
+    });
+  });
+});
+
+// Reject Loan - WORKS WHEN ADMIN PRESSES
+app.put("/api/loans/:id/reject", authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  
+  db.run("UPDATE loans SET status = 'rejected', reason = COALESCE(?, reason) WHERE id = ?", 
+         [reason, id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    res.json({ 
+      success: true, 
+      message: "Loan rejected successfully!" 
+    });
+  });
+});
+
+// Mark Fine as Paid - WORKS WHEN ADMIN PRESSES
+app.put("/api/fines/:id/pay", authenticateToken, (req, res) => {
+  const { id } = req.params;
+  
+  db.run("UPDATE fines SET paid = 1 WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    res.json({ 
+      success: true, 
+      message: "Fine marked as paid!" 
+    });
+  });
+});
+
+// Delete Record - WORKS WHEN ADMIN PRESSES
+app.delete("/api/:type/:id", authenticateToken, (req, res) => {
+  const { type, id } = req.params;
+  
+  let tableName;
+  if (type === 'savings') tableName = 'savings';
+  else if (type === 'loans') tableName = 'loans';
+  else if (type === 'fines') tableName = 'fines';
+  else return res.status(400).json({ error: "Invalid type" });
+
+  db.run(`DELETE FROM ${tableName} WHERE id = ?`, [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    res.json({ 
+      success: true, 
+      message: `${type.charAt(0).toUpperCase() + type.slice(1)} record deleted successfully!` 
+    });
+  });
+});
+
+// Request loan (for members) - submits for approval
+app.post("/api/request-loan-pending", authenticateToken, (req, res) => {
+  const { member_code, amount, purpose, reason, due_date } = req.body;
+  
+  if (!member_code || !amount || !purpose) {
+    return res.status(400).json({ success: false, error: "Member code, amount and purpose required" });
+  }
+
+  // Add to pending transactions for admin approval
+  db.run(`INSERT INTO pending_transactions 
+          (member_code, amount, type, status, proof_image) 
+          VALUES (?, ?, 'loan_request', 'pending', ?)`,
+          [member_code, amount, JSON.stringify({purpose, reason, due_date})], 
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            res.json({ 
+              success: true, 
+              message: "Loan request submitted for admin approval",
+              id: this.lastID 
+            });
+          });
+});
+
+// Pay fine (for members) - submits for approval
+app.post("/api/pay-fine-pending", authenticateToken, (req, res) => {
+  const { member_code, fine_id, amount } = req.body;
+  
+  if (!member_code || !fine_id || !amount) {
+    return res.status(400).json({ success: false, error: "Member code, fine ID and amount required" });
+  }
+
+  // Add to pending transactions for admin approval
+  db.run(`INSERT INTO pending_transactions 
+          (member_code, amount, type, status, proof_image) 
+          VALUES (?, ?, 'fine_payment', 'pending', ?)`,
+          [member_code, amount, fine_id], 
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            res.json({ 
+              success: true, 
+              message: "Fine payment submitted for admin approval",
+              id: this.lastID 
+            });
+          });
+});
+
+// Add this route to your backend
+app.post("/api/repay-loan-pending", authenticateToken, (req, res) => {
+  const { member_code, loan_id, amount } = req.body;
+  
+  if (!member_code || !loan_id || !amount) {
+    return res.status(400).json({ success: false, error: "Member code, loan ID and amount required" });
+  }
+
+  // Add to pending transactions for admin approval
+  db.run(`INSERT INTO pending_transactions 
+          (member_code, amount, type, status, proof_image) 
+          VALUES (?, ?, 'loan_repayment', 'pending', ?)`,
+          [member_code, amount, loan_id], 
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            res.json({ 
+              success: true, 
+              message: "Loan repayment submitted for admin approval",
+              id: this.lastID 
+            });
+          });
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -836,4 +1213,5 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
