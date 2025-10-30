@@ -46,25 +46,29 @@ app.use((req, res, next) => {
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_code TEXT UNIQUE,
     name TEXT, username TEXT UNIQUE, phone TEXT, email TEXT UNIQUE,
     password TEXT, role TEXT DEFAULT 'Member', balance REAL DEFAULT 0,
+    total_savings REAL DEFAULT 0, debts REAL DEFAULT 0, 
+    afterschool REAL DEFAULT 0, loans REAL DEFAULT 0, fines REAL DEFAULT 0,
     status TEXT DEFAULT 'approved', last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS savings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, amount REAL,
-    date DATETIME DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, member_code TEXT,
+    amount REAL, date DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS loans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, amount REAL,
-    principal_amount REAL DEFAULT 0, purpose TEXT, reason TEXT,
-    status TEXT DEFAULT 'pending', due_date DATE
+    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, member_code TEXT,
+    amount REAL, purpose TEXT, reason TEXT, status TEXT DEFAULT 'pending',
+    due_date DATE
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS fines (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, amount REAL,
-    reason TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid INTEGER DEFAULT 0
+    id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, member_code TEXT,
+    amount REAL, reason TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    paid INTEGER DEFAULT 0
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS announcements (
@@ -72,62 +76,88 @@ db.serialize(() => {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  // Add all members
-  const members = [
+  // Add ALL real members with their actual data
+  const realMembers = [
     {
-      name: "Kevin Buxton",
-      phone: "0112009871", 
-      email: "kevinbuxton2005@gmail.com",
-      username: "delaquez",
-      role: "treasurer",
-      password: "@Delaquez6"
+      member_code: "001", name: "Hemston Odege", role: "Chairperson",
+      balance: 2180, total_savings: 2180, debts: 0, afterschool: 550, loans: 0, fines: 0,
+      email: "hemstonodege@gmail.com", username: "morningstar", password: "pass001", phone: "0708692752"
     },
     {
-      name: "James blessings",
-      phone: "0759461630",
-      email: "Jamesblessings22122@gmail.com",
-      username: "Jaybless", 
-      role: "Chairperson",
-      password: "James2005"
+      member_code: "002", name: "James Blessing", role: "Deputy Chairperson", 
+      balance: 120, total_savings: 120, debts: 600, afterschool: 250, loans: 0, fines: 0,
+      email: "jamesblessings22122@gmail.com", username: "Jay Bless", password: "James2005", phone: "0759461630"
     },
     {
-      name: "Ashley Isca",
-      phone: "0740136631",
-      email: "berylbaraza38@gmail.com",
-      username: "Isca",
-      role: "Organiser", 
-      password: "1234..tems"
+      member_code: "003", name: "Peter Omondi", role: "Secretary",
+      balance: 2100, total_savings: 2100, debts: 400, afterschool: 400, loans: 0, fines: 0,
+      email: "peteromondi@gmail.com", username: "sketcher7", password: "pass003", phone: "0727906729"
+    },
+    {
+      member_code: "004", name: "Kevin Buxton", role: "Treasurer",
+      balance: 1890, total_savings: 1890, debts: 240, afterschool: 400, loans: 0, fines: 0,
+      email: "kevinbuxton2005@gmail.com", username: "delaquez", password: "@Delaquez6", phone: "0112009871"
+    },
+    {
+      member_code: "005", name: "Phelix Odhiambo", role: "Organizer",
+      balance: 2850, total_savings: 2850, debts: 0, afterschool: 250, loans: 0, fines: 0,
+      email: "phelixodhiambo@gmail.com", username: "phelix", password: "pass005", phone: "0740499128"
+    },
+    {
+      member_code: "006", name: "Meshack Odhiambo", role: "Head of Security",
+      balance: 3600, total_savings: 3600, debts: 440, afterschool: 450, loans: 0, fines: 0,
+      email: "okothmeshack15@gmail.com", username: "meshack", password: "pass006", phone: "0739669233"
+    },
+    {
+      member_code: "007", name: "Ashley Isca", role: "Editor", 
+      balance: 2240, total_savings: 2240, debts: 0, afterschool: 450, loans: 2000, fines: 0,
+      email: "berylbaraza38@gmail.com", username: "Isca", password: "1234..tems", phone: "0740136631"
+    },
+    {
+      member_code: "008", name: "Bayden Phelix", role: "Member",
+      balance: 600, total_savings: 600, debts: 660, afterschool: 150, loans: 0, fines: 100,
+      email: "baydenphelix@gmail.com", username: "bayden", password: "pass008", phone: "0796437516"
+    },
+    {
+      member_code: "009", name: "Jacob Onyango", role: "Member",
+      balance: 270, total_savings: 270, debts: 810, afterschool: 0, loans: 0, fines: 100,
+      email: "jacobonyango@gmail.com", username: "jacob", password: "pass009", phone: "0112978002"
+    },
+    {
+      member_code: "010", name: "Martin Okello", role: "Member",
+      balance: 0, total_savings: 0, debts: 650, afterschool: 0, loans: 0, fines: 0,
+      email: "martin@gmail.com", username: "martin", password: "pass010", phone: "0701302727"
+    },
+    {
+      member_code: "011", name: "Lenox Javan", role: "Member",
+      balance: 0, total_savings: 0, debts: 500, afterschool: 100, loans: 0, fines: 100,
+      email: "lenox@gmail.com", username: "lenox", password: "pass011", phone: "0757341511"
     }
   ];
 
-  // Add default admin and all members
-  bcrypt.hash('@Delaquez6', 10, (err, hashedPassword) => {
-    if (!err) {
-      db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role, phone) 
-              VALUES (?, ?, ?, ?, ?, ?)`, 
-              ['KEVIN BUXTON', 'kevindelaquez@gmail.com', hashedPassword, 'delaquez', 'treasurer', '0112009871']);
-    }
-  });
-
-  // Add other members
-  members.forEach(member => {
+  // Insert all real members
+  realMembers.forEach(member => {
     bcrypt.hash(member.password, 10, (err, hashedPassword) => {
       if (!err) {
-        db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role, phone) 
-                VALUES (?, ?, ?, ?, ?, ?)`, 
-                [member.name, member.email, hashedPassword, member.username, member.role, member.phone],
+        db.run(`INSERT OR IGNORE INTO members 
+                (member_code, name, email, password, username, role, phone, balance, total_savings, debts, afterschool, loans, fines) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                [
+                  member.member_code, member.name, member.email, hashedPassword, 
+                  member.username, member.role, member.phone, member.balance,
+                  member.total_savings, member.debts, member.afterschool, member.loans, member.fines
+                ],
                 function(err) {
                   if (err) {
                     console.error("Error adding member:", err.message);
                   } else {
-                    console.log(`✅ Added member: ${member.name}`);
+                    console.log(`✅ Added member: ${member.name} (${member.member_code})`);
                   }
                 });
       }
     });
   });
 });
-
 // ====================== ESSENTIAL ROUTES ======================
 
 // Health check
@@ -427,3 +457,4 @@ app.listen(PORT, () => {
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
   console.log(`🎯 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
 });
+
