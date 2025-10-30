@@ -757,6 +757,41 @@ app.put("/api/pending-transactions/:id/reject", authenticateToken, (req, res) =>
   });
 });
 
+app.get("/api/get-total-savings", (req, res) => {
+  db.get("SELECT SUM(amount) AS total FROM savings", [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ total: row?.total || 0 });
+  });
+});
+app.get("/api/group-stats", (req, res) => {
+  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+      db.get("SELECT COUNT(*) AS active_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({
+          total_members: membersRow?.total_members || 0,
+          total_savings: savingsRow?.total_savings || 0,
+          active_loans: loansRow?.active_loans || 0
+        });
+      });
+    });
+  });
+});
+app.get("/api/financial/summary", (req, res) => {
+  db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+    db.get("SELECT SUM(amount) AS total_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
+      db.get("SELECT SUM(amount) AS total_fines FROM fines WHERE paid = 0", (err, finesRow) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({
+          total_savings: savingsRow?.total_savings || 0,
+          total_loans: loansRow?.total_loans || 0,
+          total_fines: finesRow?.total_fines || 0
+        });
+      });
+    });
+  });
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -767,4 +802,5 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
