@@ -237,6 +237,46 @@ app.post("/api/add-savings", (req, res) => {
   });
 });
 
+// Improved Add Savings route - UPDATES BALANCE AUTOMATICALLY
+app.post("/api/add-savings", (req, res) => {
+  const { member_id, amount } = req.body;
+  
+  if (!member_id || !amount) {
+    return res.status(400).json({ success: false, error: "Member ID and amount required" });
+  }
+
+  // Start a transaction
+  db.serialize(() => {
+    // 1. Add to savings table
+    db.run("INSERT INTO savings (member_id, amount) VALUES (?, ?)", [member_id, amount], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      // 2. Update member's balance
+      db.run("UPDATE members SET balance = balance + ? WHERE id = ?", [amount, member_id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        res.json({ 
+          success: true, 
+          message: "Savings added and balance updated!", 
+          savingsId: this.lastID 
+        });
+      });
+    });
+  });
+});
+
+// Get member balance route
+app.get("/api/members/:id/balance", (req, res) => {
+  const { id } = req.params;
+  
+  db.get("SELECT balance FROM members WHERE id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: "Member not found" });
+    
+    res.json({ balance: row.balance });
+  });
+});
+
 // Dashboard stats
 app.get("/api/group-stats", (req, res) => {
   db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
@@ -263,6 +303,7 @@ app.listen(PORT, () => {
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
   console.log(`🎯 Login: kevindelaquez@gmail.com / 867304`);
 });
+
 
 
 
