@@ -29,7 +29,8 @@ const db = new sqlite3.Database("./mercure.db", (err) => {
 
 // Middleware - FIXED CORS (frontend on 3001, backend on 3000)
 app.use(cors({
-  origin: "http://localhost:3001", // React frontend port
+  origin: "http://localhost:3001",
+  'https://mercure-group-system.surge.sh',// React frontend port
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
@@ -217,3 +218,4 @@ app.listen(PORT, () => {
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
   console.log(`🎯 Login: kevindelaquez@gmail.com / 867304`);
 });
+
