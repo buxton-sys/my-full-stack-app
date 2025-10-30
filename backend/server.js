@@ -500,8 +500,7 @@ app.get("/api/members-dropdown", (req, res) => {
         });
       });
     });
-  });
-});
+  
 
 // Afterschool routes
 app.get("/api/afterschool", (req, res) => {
@@ -1213,5 +1212,6 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
