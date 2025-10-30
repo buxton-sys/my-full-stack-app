@@ -467,6 +467,150 @@ app.get("/api/dashboard/stats", authenticateToken, (req, res) => {
   });
 });
 
+// ====================== ADD THESE MISSING ROUTES ======================
+
+// Leaderboard route - FIXED
+app.get("/api/leaderboard/top-savers", (req, res) => {
+  db.all(`
+    SELECT m.name, m.balance, m.member_code, m.total_savings
+    FROM members m 
+    ORDER BY m.balance DESC 
+    LIMIT 10
+  `, [], (err, rows) => {
+    if (err) {
+      console.error("Leaderboard error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Total savings route - FIXED
+app.get("/api/get-total-savings", (req, res) => {
+  db.get("SELECT SUM(amount) AS total FROM savings", [], (err, row) => {
+    if (err) {
+      console.error("Total savings error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ total: row?.total || 0 });
+  });
+});
+
+// Get all fines - FIXED
+app.get("/api/get-fines", (req, res) => {
+  db.all(`
+    SELECT f.*, m.name, m.member_code 
+    FROM fines f 
+    JOIN members m ON f.member_code = m.member_code 
+    ORDER BY f.date DESC
+  `, [], (err, rows) => {
+    if (err) {
+      console.error("Fines error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Get all loans - FIXED
+app.get("/api/get-loans", (req, res) => {
+  db.all(`
+    SELECT l.*, m.name, m.member_code 
+    FROM loans l 
+    JOIN members m ON l.member_code = m.member_code 
+    ORDER BY l.due_date DESC
+  `, [], (err, rows) => {
+    if (err) {
+      console.error("Loans error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Group stats route - FIXED
+app.get("/api/group-stats", (req, res) => {
+  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+      db.get("SELECT COUNT(*) AS active_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
+        if (err) {
+          console.error("Group stats error:", err);
+          return res.status(500).json({ error: err.message });
+        }
+        res.json({
+          total_members: membersRow?.total_members || 0,
+          total_savings: savingsRow?.total_savings || 0,
+          active_loans: loansRow?.active_loans || 0
+        });
+      });
+    });
+  });
+});
+
+// Financial summary - FIXED
+app.get("/api/financial/summary", (req, res) => {
+  db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+    db.get("SELECT SUM(amount) AS total_loans FROM loans WHERE status = 'approved'", (err, loansRow) => {
+      db.get("SELECT SUM(amount) AS total_fines FROM fines WHERE paid = 0", (err, finesRow) => {
+        if (err) {
+          console.error("Financial summary error:", err);
+          return res.status(500).json({ error: err.message });
+        }
+        res.json({
+          total_savings: savingsRow?.total_savings || 0,
+          total_loans: loansRow?.total_loans || 0,
+          total_fines: finesRow?.total_fines || 0
+        });
+      });
+    });
+  });
+});
+
+// Add this function to create REAL loan and fine records
+function createRealLoansAndFines() {
+  console.log("🔄 Creating real loans and fines records...");
+  
+  // Create actual loan records in the loans table
+  const realLoans = [
+    { member_code: "007", amount: 2000, purpose: "Personal Loan", reason: "Emergency funding", due_date: "2024-12-31", status: "approved" }
+  ];
+
+  // Create actual fine records in the fines table  
+  const realFines = [
+    { member_code: "008", amount: 100, reason: "Late payment penalty" },
+    { member_code: "009", amount: 100, reason: "Meeting absence fine" },
+    { member_code: "011", amount: 100, reason: "Late submission fine" }
+  ];
+
+  realLoans.forEach(loan => {
+    db.get("SELECT id FROM members WHERE member_code = ?", [loan.member_code], (err, member) => {
+      if (!err && member) {
+        db.run(`INSERT OR IGNORE INTO loans (member_id, member_code, amount, purpose, reason, due_date, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [member.id, loan.member_code, loan.amount, loan.purpose, loan.reason, loan.due_date, loan.status],
+                function(err) {
+                  if (err) console.error(`❌ Loan record error for ${loan.member_code}:`, err);
+                  else console.log(`✅ Created REAL loan record for ${loan.member_code}: $${loan.amount}`);
+                });
+      }
+    });
+  });
+
+  realFines.forEach(fine => {
+    db.get("SELECT id FROM members WHERE member_code = ?", [fine.member_code], (err, member) => {
+      if (!err && member) {
+        db.run(`INSERT OR IGNORE INTO fines (member_id, member_code, amount, reason) 
+                VALUES (?, ?, ?, ?)`,
+                [member.id, fine.member_code, fine.amount, fine.reason],
+                function(err) {
+                  if (err) console.error(`❌ Fine record error for ${fine.member_code}:`, err);
+                  else console.log(`✅ Created REAL fine record for ${fine.member_code}: $${fine.amount}`);
+                });
+      }
+    });
+  });
+}
+
 // ====================== APPROVAL SYSTEM ROUTES (FIXED) ======================
 
 // Get user-specific data - PROTECTED
@@ -623,3 +767,4 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
