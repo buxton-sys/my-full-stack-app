@@ -226,16 +226,7 @@ app.get("/api/get-savings", (req, res) => {
   });
 });
 
-app.post("/api/add-savings", (req, res) => {
-  const { member_id, amount } = req.body;
-  if (!member_id || !amount) {
-    return res.status(400).json({ success: false, error: "Member ID and amount required" });
-  }
-  db.run("INSERT INTO savings (member_id, amount) VALUES (?, ?)", [member_id, amount], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, message: "Savings added!", id: this.lastID });
-  });
-});
+
 
 // Improved Add Savings route - UPDATES BALANCE AUTOMATICALLY
 app.post("/api/add-savings", (req, res) => {
@@ -294,6 +285,43 @@ app.get("/api/group-stats", (req, res) => {
   });
 });
 
+// ====================== MISSING DASHBOARD ROUTES ======================
+
+// Get total savings (for dashboard)
+app.get("/api/get-total-savings", (req, res) => {
+  db.get("SELECT SUM(amount) AS total FROM savings", [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ total: row.total || 0 });
+  });
+});
+
+// Get loans (for dashboard)
+app.get("/api/get-loans", (req, res) => {
+  db.all("SELECT * FROM loans", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Dashboard stats (for dashboard)
+app.get("/api/dashboard/stats", (req, res) => {
+  db.get("SELECT COUNT(*) AS total_members FROM members", (err, membersRow) => {
+    if (err) return res.status(500).json({ error: "Failed to get members count" });
+
+    db.get("SELECT SUM(amount) AS total_savings FROM savings", (err, savingsRow) => {
+      if (err) return res.status(500).json({ error: "Failed to get total savings" });
+
+      db.get("SELECT COUNT(*) AS total_loans FROM loans WHERE status = 'pending'", (err, loansRow) => {
+        res.json({
+          total_members: membersRow.total_members || 0,
+          total_savings: savingsRow.total_savings || 0,
+          pending_loans: loansRow.total_loans || 0
+        });
+      });
+    });
+  });
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -303,6 +331,7 @@ app.listen(PORT, () => {
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
   console.log(`🎯 Login: kevindelaquez@gmail.com / 867304`);
 });
+
 
 
 
