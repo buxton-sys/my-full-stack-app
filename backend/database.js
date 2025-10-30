@@ -24,6 +24,9 @@ export async function connectSqlite() {
   }
 }
 
+// In your database connection, add:
+setTimeout(createRealLoansAndFines, 3000);
+
 /**
  * Connects to the MongoDB database.
  */
@@ -120,3 +123,4 @@ export async function createDefaultAdmin(db) {
   }
 
 }
+
