@@ -85,7 +85,14 @@ export async function createTables(db) {
       prompt_type TEXT DEFAULT 'auto', prompt_time TEXT, status TEXT DEFAULT 'pending', mpesa_reference TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, completed_at DATETIME, FOREIGN KEY (member_id) REFERENCES members(id)
     );
+member_code TEXT UNIQUE,
+total_savings REAL DEFAULT 0,
+debts REAL DEFAULT 0, 
+afterschool REAL DEFAULT 0, 
+loans REAL DEFAULT 0, 
+fines REAL DEFAULT 0
   `);
+  );
   console.log('✅ Database tables created/checked.');
 }
 
@@ -111,4 +118,5 @@ export async function createDefaultAdmin(db) {
   } catch (error) {
     console.error('❌ Admin creation error:', error.message);
   }
+
 }
