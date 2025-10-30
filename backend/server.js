@@ -101,7 +101,7 @@ db.serialize(() => {
   ];
 
   // Add default admin and all members
-  bcrypt.hash('867304', 10, (err, hashedPassword) => {
+  bcrypt.hash('@Delaquez6', 10, (err, hashedPassword) => {
     if (!err) {
       db.run(`INSERT OR IGNORE INTO members (name, email, password, username, role, phone) 
               VALUES (?, ?, ?, ?, ?, ?)`, 
@@ -256,6 +256,36 @@ app.post("/api/add-savings", (req, res) => {
   });
 });
 
+// Add Fine route
+app.post("/api/add-fine", (req, res) => {
+  const { member_id, amount, reason } = req.body;
+  if (!member_id || !amount) {
+    return res.status(400).json({ success: false, error: "Member ID and amount required" });
+  }
+  db.run("INSERT INTO fines (member_id, amount, reason) VALUES (?, ?, ?)", 
+    [member_id, amount, reason], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: "Fine added!", id: this.lastID });
+  });
+});
+
+// Delete Member route
+app.delete("/api/members/:id", (req, res) => {
+  const { id } = req.params;
+  db.run("DELETE FROM members WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ success: false, error: err.message });
+    res.json({ success: true, message: "Member deleted successfully" });
+  });
+});
+
+// Get Fines route
+app.get("/api/get-fines", (req, res) => {
+  db.all("SELECT * FROM fines ORDER BY date DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 // Get member balance route
 app.get("/api/members/:id/balance", (req, res) => {
   const { id } = req.params;
@@ -329,8 +359,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 API: http://localhost:${PORT}/api`);
   console.log(`✅ Health: http://localhost:${PORT}/api/health`);
-  console.log(`🎯 Login: kevindelaquez@gmail.com / 867304`);
+  console.log(`🎯 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
 });
+
 
 
 
