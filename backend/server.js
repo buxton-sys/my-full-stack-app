@@ -6,6 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -139,7 +140,7 @@ db.serialize(() => {
     {
       member_code: "002", name: "James Blessing", role: "Deputy Chairperson", 
       balance: 120, total_savings: 120, debts: 600, afterschool: 250, loans: 0, fines: 0,
-      email: "jamesblessings22122@gmail.com", username: "Jay Bless", password: "James2005", phone: "0759461630"
+      email: "jamesblessings22122@gmail.com", username: "jay less", password: "James2005", phone: "0759461630"
     },
     {
       member_code: "003", name: "Peter Omondi", role: "Secretary",
@@ -164,7 +165,7 @@ db.serialize(() => {
     {
       member_code: "007", name: "Ashley Isca", role: "Editor", 
       balance: 2240, total_savings: 2240, debts: 0, afterschool: 450, loans: 2000, fines: 0,
-      email: "berylbaraza38@gmail.com", username: "Isca", password: "1234..tems", phone: "0740136631"
+      email: "berylbaraza38@gmail.com", username: "isca", password: "1234..tems", phone: "0740136631"
     },
     {
       member_code: "008", name: "Bayden Phelix", role: "Member",
@@ -225,35 +226,35 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "✅ API is working!" });
 });
 
-// Login route - UPDATED TO RETURN MEMBER_CODE
+// Login with username
 app.post("/api/login", (req, res) => {
-  const { member_code, password } = req.body;
+  const { username, password } = req.body;
   
-  if (!member_code || !password) {
-    return res.status(400).json({ success: false, message: "member_code and password required" });
-  }
+  console.log("📍 Login attempt for username:", username);
 
-  db.get("SELECT * FROM members WHERE member_code = ?", [member_code], async (err, member) => {
+  db.get("SELECT * FROM members WHERE username = ?", [username], async (err, member) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ success: false, message: "Database error" });
     }
     
     if (!member) {
-      return res.status(401).json({ success: false, message: "User not found" });
+      console.log("❌ User not found:", username);
+      return res.status(401).json({ success: false, message: "Invalid username or password" });
     }
 
     try {
       const match = await bcrypt.compare(password, member.password);
       
       if (!match) {
-        return res.status(401).json({ success: false, message: "Invalid password" });
+        console.log("❌ Invalid password for:", username);
+        return res.status(401).json({ success: false, message: "Invalid username or password" });
       }
 
       const token = jwt.sign(
         { 
           id: member.id, 
-          email: member.email, 
+          username: member.username, 
           role: member.role,
           member_code: member.member_code 
         },
@@ -261,7 +262,7 @@ app.post("/api/login", (req, res) => {
         { expiresIn: "7d" }
       );
 
-      console.log("✅ Login successful for:", member.email);
+      console.log("✅ Login successful for:", username);
       
       res.json({
         success: true,
@@ -271,10 +272,9 @@ app.post("/api/login", (req, res) => {
         user: {
           id: member.id,
           name: member.name,
-          email: member.email,
-          role: member.role,
           username: member.username,
-          member_code: member.member_code // CRITICAL: Add this for frontend
+          role: member.role,
+          member_code: member.member_code
         }
       });
     } catch (error) {
@@ -284,9 +284,95 @@ app.post("/api/login", (req, res) => {
   });
 });
 
-// Members routes - UPDATED TO INCLUDE ALL FIELDS
-app.get("/api/members", authenticateToken, (req, res) => {
-  db.all("SELECT id, member_code, name, email, phone, role, balance, total_savings, debts, afterschool, loans, fines FROM members", [], (err, rows) => {
+// Email configuration
+const transporter = nodemailer.createTransporter({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  }
+});
+
+// REAL Forgot Password with Email
+app.post("/api/forgot-password", (req, res) => {
+  const { email } = req.body;
+  
+  console.log("📍 Password reset request for email:", email);
+
+  db.get("SELECT * FROM members WHERE email = ?", [email], async (err, member) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
+    
+    if (!member) {
+      return res.status(404).json({ success: false, message: "Email not found in our system" });
+    }
+
+    try {
+      // Generate temporary password
+      const tempPassword = Math.random().toString(36).slice(-8);
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+      
+      // Update password in database
+      db.run("UPDATE members SET password = ? WHERE email = ?", [hashedPassword, email]);
+      
+      // Send REAL email
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Mercure Group - Password Reset',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4F46E5;">Mercure Group Password Reset</h2>
+            <p>Hello ${member.name},</p>
+            <p>You requested a password reset for your account.</p>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Your temporary password:</strong></p>
+              <p style="font-size: 24px; font-weight: bold; color: #4F46E5; margin: 10px 0;">${tempPassword}</p>
+            </div>
+            <p>Please login with this temporary password and change it immediately.</p>
+            <p><strong>Login at:</strong> https://mercure-group-system.surge.sh</p>
+            <hr style="margin: 30px 0;">
+            <p style="color: #6B7280; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Password reset email sent to ${email}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Password reset instructions sent to your email" 
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ success: false, message: "Error sending password reset email" });
+    }
+  });
+});
+
+
+// Members sorted by role hierarchy
+app.get("/api/members", (req, res) => {
+  db.all(`
+    SELECT 
+      id, member_code, name, email, phone, role, 
+      balance, total_savings, debts, afterschool, loans, fines
+    FROM members 
+    ORDER BY 
+      CASE 
+        WHEN role = 'Chairperson' THEN 1
+        WHEN role = 'Deputy Chairperson' THEN 2
+        WHEN role = 'Secretary' THEN 3
+        WHEN role = 'Treasurer' THEN 4
+        WHEN role = 'Organizer' THEN 5
+        WHEN role = 'Head of Security' THEN 6
+        WHEN role = 'Editor' THEN 7
+        ELSE 8
+      END,
+      name ASC
+  `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -469,12 +555,20 @@ app.get("/api/dashboard/stats", authenticateToken, (req, res) => {
 
 // ====================== ADD THESE MISSING ROUTES ======================
 
-// Leaderboard route - FIXED
+// PROPER Leaderboard - Sorted by rank/balance
 app.get("/api/leaderboard/top-savers", (req, res) => {
   db.all(`
-    SELECT m.name, m.balance, m.member_code, m.total_savings
-    FROM members m 
-    ORDER BY m.balance DESC 
+    SELECT 
+      member_code as id,
+      name, 
+      role,
+      balance,
+      total_savings,
+      debts,
+      afterschool
+    FROM members 
+    WHERE balance > 0
+    ORDER BY balance DESC 
     LIMIT 10
   `, [], (err, rows) => {
     if (err) {
@@ -802,6 +896,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
 
