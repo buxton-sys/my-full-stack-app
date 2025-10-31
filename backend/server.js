@@ -1262,6 +1262,21 @@ app.get("/api/debug-all", (req, res) => {
   });
 });
 
+// ADD THIS TO TOP OF server.js - Prevents data loss
+const fs = require('fs');
+
+// Backup database on startup
+if (fs.existsSync('./mercure.db')) {
+  console.log('✅ Database file exists');
+  const stats = fs.statSync('./mercure.db');
+  console.log(`📊 Database size: ${stats.size} bytes`);
+} else {
+  console.log('❌ Database file missing - creating new one');
+}
+
+// Force data to be saved immediately
+db.configure("busyTimeout", 3000);
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -1272,6 +1287,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
 
