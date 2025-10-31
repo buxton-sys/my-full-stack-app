@@ -1358,14 +1358,25 @@ app.get("/api/debug-mongodb-detailed", async (req, res) => {
       connection_test: connectionTest,
       current_time: new Date().toISOString(),
       
-      // Step-by-step fix guide
-      action_required: [
-        "1. Go to MongoDB Atlas → Network Access → Add IP 0.0.0.0/0",
-        "2. Go to Database Access → Verify user 'delaquez' exists with password '@Delaquez6'", 
-        "3. Go to Database → Create Database 'mercure_group' with collection 'members'",
-        "4. In Render, set MONGODB_URI to: mongodb+srv://delaquez:@Delaquez6@mercure-admin.wbbormv.mongodb.net/mercure_group?retryWrites=true&w=majority&appName=mercure-admin",
-        "5. Redeploy and check this endpoint again"
-      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put("/api/fix-admin-role", authenticateToken, async (req, res) => {
+  try {
+    // Find your user and make them admin
+    const result = await Member.findOneAndUpdate(
+      { username: "delaquez" },
+      { role: "super admin, treasurer" },
+      { new: true }
+    );
+    
+    res.json({ 
+      success: true, 
+      message: "Role updated to super admin", 
+      user: { username: result.username, role: result.role } 
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1381,5 +1392,6 @@ connectToDatabases().then(() => {
     console.log(`💡 Hybrid System: MongoDB for storage + SQLite for fallback`);
   });
 });
+
 
 
