@@ -1243,6 +1243,25 @@ app.get("/api/real-data", (req, res) => {
   });
 });
 
+// ADD TO server.js - Check ALL data
+app.get("/api/debug-all", (req, res) => {
+  db.all("SELECT * FROM members", (err, members) => {
+    db.all("SELECT * FROM savings", (err, savings) => {
+      db.all("SELECT * FROM fines", (err, fines) => {
+        db.all("SELECT * FROM loans", (err, loans) => {
+          res.json({
+            members: members?.length || 0,
+            savings: savings?.length || 0,
+            fines: fines?.length || 0, 
+            loans: loans?.length || 0,
+            message: "Total records in database"
+          });
+        });
+      });
+    });
+  });
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -1253,5 +1272,6 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
