@@ -427,13 +427,18 @@ async function findMemberByCode(member_code) {
   }
 }
 
-app.use(cors({ origin: '*', credentials: true, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
-app.use(express.json());
+// Super admin middleware - knows you're super admin but shows Treasurer
+const superAdminUsers = ["delaquez", "kevinbuxton2005@gmail.com"]; // Add your super admins here
 
-app.use((req, res, next) => {
-  console.log(`📍 ${req.method} ${req.path}`);
+// Middleware to enhance user object with super admin status
+const enhanceUserRole = (req, res, next) => {
+  if (req.user && superAdminUsers.includes(req.user.username)) {
+    req.user.actualRole = req.user.role; // Store original role
+    req.user.role = "Treasurer"; // Show as Treasurer publicly
+    req.user.isSuperAdmin = true; // Internal super admin flag
+  }
   next();
-});
+};
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -446,12 +451,30 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+const requireAdmin = (req, res, next) => {
+  if (req.user.role === 'admin' || req.user.isSuperAdmin) {
+    next();
+  } else {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+};
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date(), database: useMongoDB ? "MongoDB" : "SQLite" });
 });
 
 app.get("/api/test", (req, res) => {
   res.json({ message: "✅ API is working!" });
+});
+
+app.use(enhanceUserRole);
+
+app.use(cors({ origin: '*', credentials: true, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
+app.use(express.json());
+
+app.use((req, res, next) => {
+  console.log(`📍 ${req.method} ${req.path}`);
+  next();
 });
 
 app.get("/api/database-status", (req, res) => {
@@ -469,6 +492,47 @@ app.post("/api/login", async (req, res) => {
 
     const match = await bcrypt.compare(password, member.password);
     if (!match) return res.status(401).json({ success: false, message: "Invalid username or password" });
+
+     const isSuperAdmin = superAdminUsers.includes(username);
+    const displayRole = isSuperAdmin ? "Treasurer" : member.role;
+
+    const token = jwt.sign(
+      { 
+        id: member._id, 
+        username: member.username, 
+        role: displayRole, // Show as Treasurer
+        actualRole: member.role, // Keep original role
+        isSuperAdmin: isSuperAdmin, // Internal flag
+        member_code: member.member_code 
+      },
+      SECRET_KEY,
+      { expiresIn: "7d" }
+    );
+
+    console.log("✅ Login successful for:", username, "- Super Admin:", isSuperAdmin);
+    
+    res.json({
+      success: true,
+      message: "Login successful",
+      token: token,
+      role: displayRole, // Show as Treasurer
+      actualRole: member.role, // Internal use
+      isSuperAdmin: isSuperAdmin, // Internal flag
+      user: {
+        id: member._id,
+        name: member.name,
+        username: member.username,
+        role: displayRole, // Show as Treasurer
+        actualRole: member.role, // Internal use
+        isSuperAdmin: isSuperAdmin, // Internal flag
+        member_code: member.member_code
+      }
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ success: false, message: "Server error during login" });
+  }
+});
 
     const tokenPayload = { id: useMongoDB ? member._id : member.id, username: member.username, role: member.role, member_code: member.member_code };
     const token = jwt.sign(tokenPayload, SECRET_KEY, { expiresIn: "7d" });
@@ -536,7 +600,7 @@ app.get("/api/members", async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.put("/api/members/:id", authenticateToken, async (req, res) => {
+app.put("/api/members/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params; const { name, email, phone, role } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, error: "Name and email are required" });
@@ -547,7 +611,7 @@ app.put("/api/members/:id", authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.delete("/api/members/:id", authenticateToken, async (req, res) => {
+app.delete("/api/members/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (useMongoDB) { await Member.findByIdAndDelete(id); } else { sqliteDB.run("DELETE FROM members WHERE id = ?", [id]); }
@@ -826,7 +890,7 @@ app.delete("/api/announcements/:id", authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
+app.get("/api/dashboard/stats", authenticateToken, requireAdmin, async (req, res) => {
   try {
     let total_members, total_savings, total_loans, pending_transactions;
     
@@ -976,7 +1040,7 @@ app.get("/api/user/:member_code/data", authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post("/api/pending-transactions", authenticateToken, async (req, res) => {
+app.post("/api/pending-transactions", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { member_code, amount, type, proof_image } = req.body;
     const member = await findMemberByCode(member_code);
@@ -994,7 +1058,7 @@ app.post("/api/pending-transactions", authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.get("/api/pending-transactions", authenticateToken, async (req, res) => {
+app.get("/api/pending-transactions", authenticateToken, requireAdmin, async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ error: "Admin access required" });
     
@@ -1012,7 +1076,7 @@ app.get("/api/pending-transactions", authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.put("/api/pending-transactions/:id/approve", authenticateToken, async (req, res) => {
+app.put("/api/pending-transactions/:id/approve", authenticateToken, requireAdmin, async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ error: "Admin access required" });
     const { id } = req.params;
@@ -1364,19 +1428,50 @@ app.get("/api/debug-mongodb-detailed", async (req, res) => {
   }
 });
 
-app.put("/api/fix-admin-role", authenticateToken, async (req, res) => {
+app.put("/api/setup-super-admin", async (req, res) => {
   try {
-    // Find your user and make them admin
+    // Update your role in database to admin, but you'll show as Treasurer
     const result = await Member.findOneAndUpdate(
       { username: "delaquez" },
-      { role: "super admin, treasurer" },
+      { role: "admin" }, // Store as admin internally
       { new: true }
     );
     
     res.json({ 
       success: true, 
-      message: "Role updated to super admin", 
-      user: { username: result.username, role: result.role } 
+      message: "Super admin setup complete! You'll appear as Treasurer but have full admin access.",
+      user: { 
+        username: result.username, 
+        storedRole: result.role, // admin internally
+        displayRole: "Treasurer", // What users see
+        isSuperAdmin: true 
+      } 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/group-progress", async (req, res) => {
+  try {
+    const totalSavings = await Member.aggregate([
+      { $group: { _id: null, current_total: { $sum: "$total_savings" } } }
+    ]);
+
+    const totalMembers = await Member.countDocuments();
+    
+    const currentTotal = totalSavings[0]?.current_total || 0;
+    const dailyTarget = 30;
+    const yearlyTarget = dailyTarget * 365 * totalMembers;
+    const progress = Number((currentTotal / yearlyTarget) * 100); // Ensure it's a number
+    
+    res.json({
+      current_total: currentTotal,
+      daily_target: dailyTarget,
+      yearly_target: yearlyTarget,
+      progress_percentage: progress.toFixed(2), // Now this will work
+      total_members: totalMembers,
+      message: `Progress: ${progress.toFixed(2)}% of yearly target`
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1392,6 +1487,7 @@ connectToDatabases().then(() => {
     console.log(`💡 Hybrid System: MongoDB for storage + SQLite for fallback`);
   });
 });
+
 
 
 
