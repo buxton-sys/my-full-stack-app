@@ -1311,6 +1311,22 @@ app.get("/", (req, res) => {
   res.json({ message: "Mercure Group API is running!", database: useMongoDB ? "MongoDB (Primary)" : "SQLite (Fallback)", status: "All systems operational" });
 });
 
+app.get("/api/debug-mongodb-uri", (req, res) => {
+  const uri = process.env.MONGODB_URI;
+  
+  // Check what's actually in the environment variable
+  res.json({
+    has_mongodb_uri: !!uri,
+    uri_length: uri ? uri.length : 0,
+    starts_with_mongodb: uri ? uri.startsWith('mongodb') : false,
+    is_srv_format: uri ? uri.includes('mongodb+srv') : false,
+    has_database_name: uri ? uri.includes('.net/') : false,
+    database_name: uri && uri.includes('.net/') ? uri.split('.net/')[1]?.split('?')[0] : 'NOT_FOUND',
+    first_50_chars: uri ? uri.substring(0, 50) + '...' : 'NOT_SET',
+    suggestion: "Your MONGODB_URI should be: mongodb+srv://delaquez:@Delaquez6@mercure-admin.wbbormv.mongodb.net/mercure_group?retryWrites=true&w=majority"
+  });
+});
+
 connectToDatabases().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
@@ -1320,3 +1336,4 @@ connectToDatabases().then(() => {
     console.log(`💡 Hybrid System: MongoDB for storage + SQLite for fallback`);
   });
 });
+
