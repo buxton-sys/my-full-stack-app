@@ -1327,6 +1327,51 @@ app.get("/api/debug-mongodb-uri", (req, res) => {
   });
 });
 
+app.get("/api/debug-mongodb-detailed", async (req, res) => {
+  try {
+    const uri = process.env.MONGODB_URI;
+    
+    // Test the connection directly
+    let connectionTest = "Not attempted";
+    if (uri) {
+      try {
+        // Test with shorter timeout
+        await mongoose.connect(uri, {
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 10000,
+        });
+        connectionTest = "SUCCESS";
+        await mongoose.connection.close();
+      } catch (connectError) {
+        connectionTest = `FAILED: ${connectError.message}`;
+      }
+    }
+
+    res.json({
+      has_mongodb_uri: !!uri,
+      uri_starts_correctly: uri ? uri.startsWith('mongodb+srv://') : false,
+      uri_format: uri ? 
+        `Username: ${uri.split('://')[1]?.split(':')[0]}, ` +
+        `Cluster: ${uri.split('@')[1]?.split('.')[0]}, ` +
+        `Database: ${uri.includes('.net/') ? uri.split('.net/')[1]?.split('?')[0] : 'MISSING'}` 
+        : 'No URI',
+      connection_test: connectionTest,
+      current_time: new Date().toISOString(),
+      
+      // Step-by-step fix guide
+      action_required: [
+        "1. Go to MongoDB Atlas → Network Access → Add IP 0.0.0.0/0",
+        "2. Go to Database Access → Verify user 'delaquez' exists with password '@Delaquez6'", 
+        "3. Go to Database → Create Database 'mercure_group' with collection 'members'",
+        "4. In Render, set MONGODB_URI to: mongodb+srv://delaquez:@Delaquez6@mercure-admin.wbbormv.mongodb.net/mercure_group?retryWrites=true&w=majority&appName=mercure-admin",
+        "5. Redeploy and check this endpoint again"
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 connectToDatabases().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
@@ -1336,4 +1381,5 @@ connectToDatabases().then(() => {
     console.log(`💡 Hybrid System: MongoDB for storage + SQLite for fallback`);
   });
 });
+
 
