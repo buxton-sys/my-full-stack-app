@@ -7,6 +7,9 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from 'nodemailer';
+import mongoose from 'mongoose';
+import { Member, Saving, Fine, Loan } from './models.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,14 +22,16 @@ const SECRET_KEY = process.env.JWT_SECRET || "MERCURE_SECRET_2025";
 
 console.log("🔄 Server starting...");
 
-// Database connection
-const db = new sqlite3.Database("./mercure.db", (err) => {
-  if (err) {
-    console.error("❌ DB connection error:", err.message);
-  } else {
-    console.log("✅ SQLite DB connected");
-  }
-});
+// MongoDB connection
+const MONGODB_URI = process.env.MONGODB_URI;
+
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('✅ MongoDB Connected - Data will NEVER disappear!');
+    // Transfer existing data automatically
+    transferDataToMongoDB();
+  })
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Middleware
 app.use(cors({
@@ -1272,6 +1277,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
 
