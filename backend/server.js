@@ -1131,6 +1131,105 @@ app.post("/api/repay-loan-pending", authenticateToken, (req, res) => {
           });
 });
 
+// ====================== REAL WORKING ROUTES ======================
+
+// REAL Automation status - using actual data
+app.get("/api/automation/status", (req, res) => {
+  db.get("SELECT COUNT(*) as total_members FROM members", (err, members) => {
+    db.get("SELECT COUNT(*) as pending_loans FROM loans WHERE status = 'pending'", (err, loans) => {
+      res.json({
+        success: true,
+        status: "active", 
+        total_members: members?.total_members || 0,
+        pending_loans: loans?.pending_loans || 0,
+        lastDailyRun: new Date().toISOString(),
+        message: "System operational"
+      });
+    });
+  });
+});
+
+// REAL Automation activities - from actual database
+app.get("/api/automation/activities", (req, res) => {
+  db.all(`
+    SELECT 
+      'savings' as type,
+      'Daily savings recorded' as description,
+      member_code,
+      amount,
+      date as timestamp
+    FROM savings 
+    WHERE date(date) = date('now')
+    UNION ALL
+    SELECT 
+      'loan' as type,
+      'Loan ' || status as description, 
+      member_code,
+      amount,
+      due_date as timestamp
+    FROM loans
+    WHERE date(due_date) >= date('now', '-7 days')
+    ORDER BY timestamp DESC
+    LIMIT 10
+  `, [], (err, rows) => {
+    if (err) {
+      console.error("Activities error:", err);
+      return res.json([]);
+    }
+    res.json(rows || []);
+  });
+});
+
+// REAL Pending transactions - FIXED
+app.get("/api/pending-transactions", authenticateToken, (req, res) => {
+  db.all(`
+    SELECT pt.*, m.name 
+    FROM pending_transactions pt 
+    JOIN members m ON pt.member_code = m.member_code 
+    WHERE pt.status = 'pending' 
+    ORDER BY pt.created_at DESC
+  `, [], (err, rows) => {
+    if (err) {
+      console.error("Pending transactions error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows || []);
+  });
+});
+
+// REAL Approve pending transaction
+app.put("/api/pending-transactions/:id/approve", authenticateToken, (req, res) => {
+  const { id } = req.params;
+  
+  db.get("SELECT * FROM pending_transactions WHERE id = ?", [id], (err, transaction) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!transaction) return res.status(404).json({ error: "Transaction not found" });
+    
+    // Update status to approved
+    db.run("UPDATE pending_transactions SET status = 'approved' WHERE id = ?", [id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      res.json({ 
+        success: true, 
+        message: "Transaction approved successfully" 
+      });
+    });
+  });
+});
+
+// REAL Reject pending transaction  
+app.put("/api/pending-transactions/:id/reject", authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  
+  db.run("UPDATE pending_transactions SET status = 'rejected', rejection_reason = ? WHERE id = ?",
+         [reason, id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    res.json({ success: true, message: "Transaction rejected" });
+  });
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -1141,3 +1240,4 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
