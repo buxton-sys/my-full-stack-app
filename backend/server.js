@@ -345,6 +345,97 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Add this route to debug the login issue
+app.get("/api/debug-login", async (req, res) => {
+  try {
+    console.log("🔍 Debugging login setup...");
+    
+    // Check if members exist
+    const members = await Member.find().limit(3);
+    console.log("Found members:", members.length);
+    
+    // Check if test user exists
+    const testUser = await Member.findOne({ username: "delaquez" });
+    
+    res.json({
+      database_connected: mongoose.connection.readyState === 1,
+      total_members: await Member.countDocuments(),
+      test_user_exists: !!testUser,
+      test_user: testUser ? {
+        username: testUser.username,
+        hasPassword: !!testUser.password
+      } : null,
+      sample_members: members.map(m => ({
+        username: m.username,
+        name: m.name
+      }))
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Register new member
+app.post("/api/register", async (req, res) => {
+  try {
+    const { name, email, username, password, phone } = req.body;
+    
+    if (!name || !email || !username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "All fields are required" 
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await Member.findOne({ 
+      $or: [{ email }, { username }] 
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "User already exists with this email or username" 
+      });
+    }
+
+    // Generate member code (you might want a better system)
+    const memberCount = await Member.countDocuments();
+    const member_code = String(memberCount + 1).padStart(3, '0');
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const newMember = await Member.create({
+      member_code,
+      name,
+      email,
+      username,
+      password: hashedPassword,
+      phone,
+      role: 'Member',
+      balance: 0,
+      total_savings: 0,
+      debts: 0,
+      afterschool: 0,
+      loans: 0,
+      fines: 0
+    });
+
+    res.json({ 
+      success: true, 
+      message: "Registration successful!",
+      member_code: newMember.member_code
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Registration failed" 
+    });
+  }
+});
+
 // Email configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -1328,6 +1419,14 @@ app.get("/api/debug-all", async (req, res) => {
   }
 });
 
+// Serve static files from React build (if you have a build folder)
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Catch-all handler: send back React's index.html for any unknown routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running with MongoDB!"));
 
@@ -1339,4 +1438,5 @@ app.listen(PORT, () => {
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
   console.log(`🗄️  Database: MongoDB - All data preserved!`);
 });
+
 
