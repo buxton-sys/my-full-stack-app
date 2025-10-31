@@ -8,7 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from 'nodemailer';
 import mongoose from 'mongoose';
-import { Member, Saving, Fine, Loan } from './models.js';
+
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,11 +28,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ MongoDB Connected - Data will NEVER disappear!');
-    // Transfer existing data automatically
-    transferDataToMongoDB();
-  })
-  .catch(err => console.error('❌ MongoDB connection error:', err));
-
+   
 // Middleware
 app.use(cors({
   origin: '*',
@@ -1277,6 +1273,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
 
 
