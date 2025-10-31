@@ -20,8 +20,11 @@ const SECRET_KEY = process.env.JWT_SECRET || "MERCURE_SECRET_2025";
 console.log("🔄 Server starting...");
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/mercure_group";
-
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("❌ MONGODB_URI environment variable is required!");
+  process.exit(1);
+}
 // Mongoose Models - Keeping same structure as SQL tables
 const memberSchema = new mongoose.Schema({
   member_code: { type: String, unique: true, required: true },
@@ -1438,5 +1441,6 @@ app.listen(PORT, () => {
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
   console.log(`🗄️  Database: MongoDB - All data preserved!`);
 });
+
 
 
