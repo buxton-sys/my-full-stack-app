@@ -234,6 +234,20 @@ async function createRealLoansAndFines() {
   }
 }
 
+// Add this route to debug MongoDB connection
+app.get("/api/debug/mongodb", async (req, res) => {
+  try {
+    const isConnected = mongoose.connection.readyState === 1;
+    res.json({ 
+      mongodb_connected: isConnected,
+      readyState: mongoose.connection.readyState,
+      connection_string: process.env.MONGODB_URI ? "Set" : "Not set"
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Middleware
 app.use(cors({
   origin: '*',
@@ -1325,3 +1339,4 @@ app.listen(PORT, () => {
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
   console.log(`🗄️  Database: MongoDB - All data preserved!`);
 });
+
