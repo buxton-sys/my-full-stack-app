@@ -1230,6 +1230,19 @@ app.put("/api/pending-transactions/:id/reject", authenticateToken, (req, res) =>
   });
 });
 
+// ADD THIS TO YOUR server.js - It shows what's REALLY in the database
+app.get("/api/real-data", (req, res) => {
+  db.all("SELECT * FROM savings", (err, savings) => {
+    db.all("SELECT * FROM fines", (err, fines) => {
+      res.json({
+        savings: savings || [],
+        fines: fines || [],
+        message: `Found ${savings?.length || 0} savings and ${fines?.length || 0} fines in database`
+      });
+    });
+  });
+});
+
 // ====================== SERVER START ======================
 app.get("/", (req, res) => res.send("Mercure API running!"));
 
@@ -1240,4 +1253,5 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: kevinbuxton2005@gmail.com / @Delaquez6`);
   console.log(`📊 New Features: Approval System, Member Codes, Enhanced Security`);
 });
+
 
