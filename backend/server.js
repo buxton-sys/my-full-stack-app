@@ -493,12 +493,12 @@ app.post("/api/login", async (req, res) => {
     const match = await bcrypt.compare(password, member.password);
     if (!match) return res.status(401).json({ success: false, message: "Invalid username or password" });
 
-     const isSuperAdmin = superAdminUsers.includes(username);
+    const isSuperAdmin = superAdminUsers.includes(username);
     const displayRole = isSuperAdmin ? "Treasurer" : member.role;
 
     const token = jwt.sign(
       { 
-        id: member._id, 
+        id: useMongoDB ? member._id : member.id, // Fixed to handle both DB types
         username: member.username, 
         role: displayRole, // Show as Treasurer
         actualRole: member.role, // Keep original role
@@ -513,13 +513,13 @@ app.post("/api/login", async (req, res) => {
     
     res.json({
       success: true,
-      message: "Login successful",
+      message: `Login successful (${useMongoDB ? "MongoDB" : "SQLite"})`,
       token: token,
       role: displayRole, // Show as Treasurer
       actualRole: member.role, // Internal use
       isSuperAdmin: isSuperAdmin, // Internal flag
       user: {
-        id: member._id,
+        id: useMongoDB ? member._id : member.id, // Fixed to handle both DB types
         name: member.name,
         username: member.username,
         role: displayRole, // Show as Treasurer
@@ -527,22 +527,6 @@ app.post("/api/login", async (req, res) => {
         isSuperAdmin: isSuperAdmin, // Internal flag
         member_code: member.member_code
       }
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ success: false, message: "Server error during login" });
-  }
-});
-
-    const tokenPayload = { id: useMongoDB ? member._id : member.id, username: member.username, role: member.role, member_code: member.member_code };
-    const token = jwt.sign(tokenPayload, SECRET_KEY, { expiresIn: "7d" });
-
-    res.json({
-      success: true,
-      message: `Login successful (${useMongoDB ? "MongoDB" : "SQLite"})`,
-      token: token,
-      role: member.role,
-      user: { id: useMongoDB ? member._id : member.id, name: member.name, username: member.username, role: member.role, member_code: member.member_code }
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -1487,6 +1471,7 @@ connectToDatabases().then(() => {
     console.log(`💡 Hybrid System: MongoDB for storage + SQLite for fallback`);
   });
 });
+
 
 
 
