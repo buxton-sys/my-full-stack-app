@@ -7,7 +7,6 @@ import {
   getLeaderboard,
   getGroupProgress,
   getAutomationStatus, 
-  getAutoActivities,
   getPendingTransactions,
   approveLoan,
   rejectLoan,
@@ -431,7 +430,7 @@ export default function AdminDashboard() {
               
               <div className="text-center mb-6">
                 <div className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-                  {stats.progress.toFixed(1)}%
+                  {typeof stats.progress === 'number' ? stats.progress.toFixed(2) : '0.00'}%
                 </div>
                 <p className="text-gray-500 dark:text-gray-400">
                   Towards Ksh {stats.goal.toLocaleString()} goal

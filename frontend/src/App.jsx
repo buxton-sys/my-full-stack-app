@@ -134,7 +134,7 @@ const App = () => {
 
           {/* Admin-only routes */}
           <Route path="members" element={
-            <ProtectedRoute allowedRoles={["admin", "chairperson", "treasurer", "secretary"]}>
+            <ProtectedRoute allowedRoles={["admin", "chairperson", "Treasurer", "secretary"]}>
               <Members />
             </ProtectedRoute>
           } />
@@ -145,7 +145,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="admin" element={
-            <ProtectedRoute allowedRoles={["treasurer", "chairperson"]}>
+            <ProtectedRoute allowedRoles={["Treasurer", "chairperson"]}>
               <AdminDashboard /><SuperAdminPanel />
             </ProtectedRoute>
           } />

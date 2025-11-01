@@ -199,7 +199,7 @@ const handleAdd = async () => {
   const filteredCount = Array.isArray(filteredMembers) ? filteredMembers.length : 0;
 
   // Check if user can edit/delete (only admins)
-  const canEditDelete = userRole === 'treasurer' || userRole === 'admin';
+  const canEditDelete = userRole === 'Treasurer' || userRole === 'admin';
 
   return (
     <div className="p-4 sm:p-6 font-sans">
@@ -224,7 +224,7 @@ const handleAdd = async () => {
       </div>
 
       {/* Add Member Card - Only for Admins */}
-      {(userRole === 'treasurer' || userRole === 'admin') && (
+      {(userRole === 'Treasurer' || userRole === 'admin') && (
         <div className="mb-6 sm:mb-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100">Add New Member</h3>
@@ -389,7 +389,7 @@ const handleAdd = async () => {
                 <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">Name</th>
                 <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">Role</th>
                 <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">Balance</th>
-                {(userRole === 'treasurer' || userRole === 'admin') && (
+                {(userRole === 'Treasurer' || userRole === 'admin') && (
                   <th className="text-left p-3 sm:p-4 font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">Actions</th>
                 )}
               </tr>
@@ -467,7 +467,7 @@ const handleAdd = async () => {
                             Ksh {m.balance?.toLocaleString() || '0'}
                           </div>
                         </td>
-                        {(userRole === 'treasurer' || userRole === 'admin') && (
+                        {(userRole === 'Treasurer' || userRole === 'admin') && (
                           <td className="p-3 sm:p-4">
                             <div className="flex space-x-2">
                               <button 
@@ -554,7 +554,7 @@ const handleAdd = async () => {
                 <span className="text-gray-600 dark:text-gray-400">Balance:</span>
                 <span className="font-medium text-green-600 dark:text-green-400">Ksh {viewMember.balance?.toLocaleString() || '0'}</span>
               </div>
-              {(userRole === 'treasurer' || userRole === 'admin') && (
+              {(userRole === 'Treasurer' || userRole === 'admin') && (
                 <>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Phone:</span>

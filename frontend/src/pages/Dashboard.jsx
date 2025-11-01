@@ -39,7 +39,7 @@ export default function Dashboard() {
   const [totalSavings, setTotalSavings] = useState(0);
   const [loans, setLoans] = useState([]);
   const [leaderboard, setLeaderboard] = useState(null);
-  const [target] = useState(60000);
+  const [target] = useState(120450);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalMembers: 0,
@@ -58,7 +58,7 @@ export default function Dashboard() {
     setUserRole(role);
     setCurrentUser(user);
     
-    if (role === 'treasurer' || role === 'admin') {
+    if (role === 'Treasurer' || role === 'admin') {
       fetchDashboardData();
     } else {
       fetchUserSpecificData(user);
@@ -162,7 +162,7 @@ export default function Dashboard() {
         });
         
         // For members, show personal progress
-        const personalTarget = 10000; // Personal target of 10,000
+        const personalTarget = 10950; // Personal target of 10,000
         const personalProgress = Math.min(((currentMember.balance || 0) / personalTarget) * 100, 100);
         
         setStats({
@@ -410,7 +410,7 @@ export default function Dashboard() {
         </div>
 
         {/* Leaderboard - Only show for admins */}
-        {(userRole === 'treasurer' || userRole === 'admin') && (
+        {(userRole === 'Treasurer' || userRole === 'admin') && (
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">Top Savers</h2>

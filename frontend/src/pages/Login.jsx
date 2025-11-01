@@ -15,29 +15,33 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      const response = await axios.post("https://mercure-group.onrender.com/api/login", {
-        username,
-        password,
-      });
+  try {
+    const response = await axios.post("https://mercure-group.onrender.com/api/login", {
+      username,
+      password,
+    });
 
-      if (response.data.success) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        
-        // ALWAYS redirect to dashboard regardless of role
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please check your credentials.");
-    } finally {
-      setLoading(false);
+    if (response.data.success) {
+      console.log("🔑 Login Response:", response.data);
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      
+      // ✅ ADD THIS LINE - Store the role separately
+      localStorage.setItem("role", response.data.role);
+      
+      // ALWAYS redirect to dashboard regardless of role
+      navigate("/dashboard");
     }
-  };
+  } catch (err) {
+    setError(err.response?.data?.message || "Login failed. Please check your credentials.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();

@@ -107,7 +107,7 @@ export default function Savings() {
 
   const fetchPendingTransactions = async () => {
     try {
-      if (userRole === 'admin' || userRole === 'treasurer') {
+      if (userRole === 'admin' || userRole === 'Treasurer') {
         const res = await getPendingTransactions();
         setPendingTransactions(res.data || []);
       }
@@ -398,7 +398,7 @@ const handleDeleteSaving = async (savingId) => {
         )}
 
         {/* Pending Approvals - REAL DATA - Only for Admins */}
-        {(userRole === 'treasurer' || userRole === 'admin') && pendingTransactions.length > 0 && (
+        {(userRole === 'Treasurer' || userRole === 'admin') && pendingTransactions.length > 0 && (
           <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/50 dark:to-amber-900/50 rounded-3xl p-4 sm:p-6 shadow-xl border border-orange-200 dark:border-orange-800 mb-6 sm:mb-8">
             <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
               <span className="text-xl sm:text-2xl">⏳</span> Pending Approvals ({pendingTransactions.length})
@@ -667,7 +667,7 @@ const handleDeleteSaving = async (savingId) => {
         )}
 
         {/* Savings Records Table - ADD THIS NEW SECTION */}
-{(userRole === 'admin' || userRole === 'treasurer') && userSavings.length > 0 && (
+{(userRole === 'admin' || userRole === 'Treasurer') && userSavings.length > 0 && (
   <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 shadow-xl border border-white/60 dark:border-gray-700 mt-6">
     <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
       <span className="text-xl sm:text-2xl">📋</span> 
@@ -850,7 +850,7 @@ const handleDeleteSaving = async (savingId) => {
                             </p>
                           )}
                         </div>
-                        {(userRole === 'treasurer' || userRole === 'admin') && (
+                        {(userRole === 'Treasurer' || userRole === 'admin') && (
                           <button 
                             onClick={() => handlePayAfterschool(a.id, a.amount)}
                             className="bg-green-500 text-white px-3 sm:px-4 py-2 rounded-xl font-semibold hover:bg-green-600 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-green-500/25 text-xs sm:text-sm w-full sm:w-auto"

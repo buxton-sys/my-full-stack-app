@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = 'https://mercure-group.onrender.com'; // Changed to base URL without /api
-const API_BASE_URL = `${BASE_URL}/api`; // Add this for consistency
+const BASE_URL = 'https://mercure-group.onrender.com';
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -48,7 +47,6 @@ export const login = (credentials) => {
 export const forgotPassword = (email) => {
   return api.post("/api/forgot-password", { email });
 };
-
 
 // MEMBERS endpoints
 export const getMembers = () => {
@@ -337,12 +335,10 @@ export const register = (userData) => {
   return api.post("/api/register", userData);
 };
 
-// Add these export functions to your existing api.js file
-
 // Saving Approval Functions
 export const approveSaving = async (transactionId) => {
   try {
-    const response = await api.put(`/savings/approve/${transactionId}`);
+    const response = await api.put(`/api/savings/approve/${transactionId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -351,27 +347,39 @@ export const approveSaving = async (transactionId) => {
 
 export const rejectSaving = async (transactionId) => {
   try {
-    const response = await api.put(`/savings/reject/${transactionId}`);
+    const response = await api.put(`/api/savings/reject/${transactionId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-// Automation Functions
-export const getAutomationStatus = async () => {
-  try {
-    const response = await api.get('/automation/status');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+// AUTOMATION ENDPOINTS - CORRECTED AND COMPLETE
+export const getAutomationMembers = () => {
+  return api.get("/api/automation/members");
 };
 
+export const sendManualPrompt = (data) => {
+  return api.post("/api/automation/send-manual-prompt", data);
+};
+
+export const triggerMorningPrompts = () => {
+  return api.post("/api/automation/trigger-morning-prompts");
+};
+
+export const triggerEveningPrompts = () => {
+  return api.post("/api/automation/trigger-evening-prompts");
+};
+
+export const getAutomationStatus = () => {
+  return api.get("/api/automation/status");
+};
+
+// Additional automation functions (if needed)
 export const getAutoActivities = async () => {
   try {
-    const response = await api.get('/automation/activities');
-    return response.data;
+    const response = await api.get('/api/automation/activities');
+    return response;
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -379,8 +387,8 @@ export const getAutoActivities = async () => {
 
 export const triggerDaily = async () => {
   try {
-    const response = await api.post('/automation/daily');
-    return response.data;
+    const response = await api.post('/api/automation/daily');
+    return response;
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -388,26 +396,8 @@ export const triggerDaily = async () => {
 
 export const triggerWeekly = async () => {
   try {
-    const response = await api.post('/automation/weekly');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const triggerMorningPrompts = async () => {
-  try {
-    const response = await api.post('/automation/morning-prompts');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const triggerEveningPrompts = async () => {
-  try {
-    const response = await api.post('/automation/evening-prompts');
-    return response.data;
+    const response = await api.post('/api/automation/weekly');
+    return response;
   } catch (error) {
     throw error.response?.data || error;
   }
