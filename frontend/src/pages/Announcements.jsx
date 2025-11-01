@@ -86,7 +86,7 @@ export default function Announcements() {
   return (
     <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen font-['Inter']">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {/* Header */} 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
             Announcements
@@ -94,12 +94,12 @@ export default function Announcements() {
           <p className="text-gray-600">Share important updates with members</p>
         </div>
 
-        {/* Alerts */}
+        {/* Alerts */} 
         {(error || success) && (
           <div className={`mb-6 p-4 rounded-2xl text-center font-medium transition-all duration-300 ${
             success 
-              ? "bg-green-500/20 text-green-700 border border-green-500/30" 
-              : "bg-red-500/20 text-red-700 border border-red-500/30"
+              ? "bg-green-500/20 text-green-700 border border-green-500/30 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30" 
+              : "bg-red-500/20 text-red-700 border border-red-500/30 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30"
           }`}>
             {success || error}
           </div>
@@ -107,31 +107,31 @@ export default function Announcements() {
 
         {/* Add Announcement Card */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/60 mb-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
             <span className="text-2xl">📢</span> New Announcement
           </h3>
           
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Title</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">Title</label>
               <input 
                 type="text" 
                 placeholder="Enter announcement title..."
                 value={newAnnouncement.title}
                 onChange={e => setNewAnnouncement({...newAnnouncement, title: e.target.value})}
-                className="w-full bg-white border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                className="w-full bg-white dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
                 disabled={loading}
               />
             </div>
             
             <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Message</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">Message</label>
               <textarea 
                 placeholder="Enter announcement message..."
                 value={newAnnouncement.message}
                 onChange={e => setNewAnnouncement({...newAnnouncement, message: e.target.value})}
                 rows="4"
-                className="w-full bg-white border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 resize-none"
+                className="w-full bg-white dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 resize-none"
                 disabled={loading}
               />
             </div>
@@ -155,9 +155,9 @@ export default function Announcements() {
 
         {/* Announcements List */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/60">
-          <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
             <span className="text-2xl">📋</span> All Announcements
-            <span className="text-sm font-normal text-gray-500 ml-2">
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
               ({announcements.length} total)
             </span>
           </h3>
@@ -165,24 +165,24 @@ export default function Announcements() {
           {loading ? (
             <div className="text-center py-8">
               <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading announcements...</p>
+              <p className="text-gray-600 dark:text-gray-400">Loading announcements...</p>
             </div>
           ) : announcements.length > 0 ? (
             <div className="space-y-4">
               {announcements.map((announcement, idx) => (
                 <div 
                   key={announcement._id || announcement.id || idx} 
-                  className="bg-gray-50/50 border border-gray-200 rounded-2xl p-4 hover:border-purple-300 transition-all duration-300"
+                  className="bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-gray-800 text-lg">{announcement.title}</h4>
-                    <span className="text-sm text-gray-500">
+                    <h4 className="font-bold text-gray-800 dark:text-gray-100 text-lg">{announcement.title}</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(announcement.createdAt || announcement.date)}
                     </span>
                   </div>
-                  <p className="text-gray-600 whitespace-pre-wrap">{announcement.message}</p>
+                  <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{announcement.message}</p>
                   {announcement.author && (
-                    <div className="mt-2 text-sm text-gray-500">
+                    <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                       By: {announcement.author}
                     </div>
                   )}
@@ -190,10 +190,10 @@ export default function Announcements() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <div className="text-4xl mb-2">📭</div>
               <p>No announcements yet</p>
-              <p className="text-sm text-gray-400 mt-1">Be the first to share an update!</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Be the first to share an update!</p>
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Sidebar() {
   // Get current user role from localStorage
-  const userRole = localStorage.getItem('userRole')?.toLowerCase();
+  const userRole = localStorage.getItem('role')?.toLowerCase();
   
   // Check if user is super admin (treasurer or chairperson)
   const isSuperAdmin = userRole === 'treasurer' || userRole === 'chairperson';
@@ -51,7 +51,7 @@ export default function Sidebar() {
         {/* SUPER ADMIN LINK - Only show to treasurers & chairpersons */}
         {isSuperAdmin && (
           <Link 
-            to="/super-admin" 
+            to="/superadminpanel" 
             className="flex items-center p-3 rounded-md bg-gradient-to-r from-purple-500/10 to-blue-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:from-purple-500/20 hover:to-blue-500/20 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group"
           >
             <span className="mr-3 text-lg">👑</span>

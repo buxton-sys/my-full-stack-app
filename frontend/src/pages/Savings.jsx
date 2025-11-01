@@ -13,7 +13,9 @@ import {
   addPendingTransaction,
   approveTransaction,
   getPendingTransactions
-} from "../api";
+} from "../api"; // Assuming deleteSaving and updateSaving are in api.js
+
+import { deleteSaving, updateSaving } from '../api';
 
 export default function Savings() {
   const [savings, setSavings] = useState([]);

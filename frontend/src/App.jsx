@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import SuperAdminPanel from "./pages/SuperAdminPanel";
+import { loginUser } from "./api";
 
 // Enhanced authentication check
 const isAuthenticated = () => {
@@ -101,7 +102,12 @@ const App = () => {
         {/* Public Routes - Only accessible when NOT logged in */}
         <Route path="/login" element={
           <PublicRoute>
-            <Login />
+            <Login onLogin={(role) => {
+              // This is a bit of a hack to force a re-render/re-evaluation of routes.
+              // A better solution would involve a global state management library.
+              localStorage.setItem("role", role);
+              window.location.href = '/dashboard';
+            }}/>
           </PublicRoute>
         } />
         
@@ -140,7 +146,7 @@ const App = () => {
           } />
           <Route path="admin" element={
             <ProtectedRoute allowedRoles={["treasurer", "chairperson"]}>
-              <AdminDashboard />
+              <AdminDashboard /><SuperAdminPanel />
             </ProtectedRoute>
           } />
         </Route>

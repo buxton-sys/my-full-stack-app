@@ -7,7 +7,8 @@ import {
   getUserRole,
   getLeaderboard,
   getGroupProgress,
-  getFinancialSummary
+  getFinancialSummary,
+  getFinesWithMembers
 } from "../api";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const [members, setMembers] = useState([]);
   const [totalSavings, setTotalSavings] = useState(0);
   const [loans, setLoans] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboard, setLeaderboard] = useState(null);
   const [target] = useState(60000);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -69,12 +70,13 @@ export default function Dashboard() {
     try {
       setLoading(true);
       
-      const [membersRes, savingsRes, loansRes, leaderboardRes, groupProgressRes] = await Promise.allSettled([
+      const [membersRes, savingsRes, loansRes, leaderboardRes, groupProgressRes, finesRes] = await Promise.allSettled([
         getMembers(),
-        getSavingsWithMembers(), // Fixed typo: was getSavingsWithMmebers
+        getFinancialSummary(),
         getLoansWithMembers(),
         getLeaderboard(),
-        getGroupProgress()
+        getGroupProgress(),
+        getFinesWithMembers()
       ]);
 
       // Handle members response - FIXED
@@ -87,12 +89,7 @@ export default function Dashboard() {
       // Handle savings response - FIXED
       let savingsAmount = 0;
       if (savingsRes.status === 'fulfilled') {
-        const savingsData = savingsRes.value?.data || savingsRes.value;
-        if (Array.isArray(savingsData)) {
-          savingsAmount = savingsData.reduce((sum, saving) => sum + Number(saving.amount || 0), 0);
-        } else {
-          savingsAmount = savingsData?.total_savings || savingsData?.total || 0;
-        }
+        savingsAmount = savingsRes.value.data.total_savings;
       }
       setTotalSavings(savingsAmount);
 
@@ -110,13 +107,18 @@ export default function Dashboard() {
       // Handle leaderboard response - FIXED
       let leaderboardData = [];
       if (leaderboardRes.status === 'fulfilled') {
-        leaderboardData = Array.isArray(leaderboardRes.value?.data) ? leaderboardRes.value.data : leaderboardRes.value || [];
+        leaderboardData = leaderboardRes.value.data;
       }
       setLeaderboard(leaderboardData);
 
       // Handle group progress - FIXED
       if (groupProgressRes.status === 'fulfilled') {
         setGroupProgress(groupProgressRes.value?.data || groupProgressRes.value);
+      }
+
+      let finesData = [];
+      if (finesRes.status === 'fulfilled') {
+        finesData = finesRes.value.data;
       }
 
       // Calculate progress
@@ -192,7 +194,7 @@ export default function Dashboard() {
   // Safe data access - FIXED
   const safeTotalSavings = userRole === 'member' ? (userSpecificData.balance || 0) : (totalSavings || 0);
   const safeProgress = Math.min((safeTotalSavings / target) * 100, 100);
-  const safeLeaderboard = Array.isArray(leaderboard) ? leaderboard : [];
+  const safeLeaderboard = Array.isArray(leaderboard) ? leaderboard : (leaderboard ? [leaderboard] : []);
   const safeActiveLoans = userRole === 'member' ? (userSpecificData.loans || 0) : (stats.activeLoans || 0);
 
   if (loading) {
