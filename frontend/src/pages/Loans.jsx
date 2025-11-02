@@ -83,7 +83,7 @@ export default function Loans() {
           daysOverdue,
           weeklyPenalties,
           dueDate: new Date(loanDate.getTime() + 30 * 24 * 60 * 60 * 1000),
-          totalOwed: totalAmount + totalInterest + totalPenalty,
+          totalOwed: Number(totalAmount) + Number(totalInterest) + Number(totalPenalty),
           paidAmount,
           remainingAmount: remainingAmount > 0 ? remainingAmount : 0,
           isFullyPaid: remainingAmount <= 0,
@@ -280,6 +280,11 @@ export default function Loans() {
     try {
       setLoading(true);
       const res = await applyInterest();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second for backend
+    await fetchLoans(); // Refresh loans data
+    await fetchLoanStats(); // Refresh stats
+    
+
       if (res?.data?.success) {
         setSuccess(`✅ ${res.data.message} - Total interest: Ksh ${res.data.total_interest_applied}`);
       } else {
@@ -1024,6 +1029,7 @@ export default function Loans() {
                           </td>
                           <td className="p-3 sm:p-4">
                             <div className="font-bold text-purple-600 dark:text-purple-400 text-sm sm:text-base">Ksh {loan.amount}</div>
+                             <div className="text-xs font-bold text-blue-600 dark:text-blue-400"></div>
                             {loan.interest > 0 && (
                               <div className="text-xs text-green-600 dark:text-green-400">+{loan.interest} interest</div>
                             )}
@@ -1035,6 +1041,9 @@ export default function Loans() {
                                 Remaining: Ksh {loan.remainingAmount}
                               </div>
                             )}
+                            <div className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-1">
+    Total: Ksh {loan.totalOwed}
+  </div>
                           </td>
                           <td className="p-3 sm:p-4 text-gray-600 dark:text-gray-300 text-sm sm:text-base">{loan.purpose || loan.reason}</td>
                           <td className="p-3 sm:p-4">

@@ -39,3 +39,16 @@ button:disabled {
   transform: none;
   box-shadow: none;
 } 
+
+
+.password-input {
+  position: relative;
+  display: flex;
+}
+.show-password-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: -40px;
+  z-index: 2;
+}
